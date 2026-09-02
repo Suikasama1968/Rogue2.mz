@@ -37,6 +37,7 @@
 Cygwin、z88dk、GNU Make、Python 3を使用します。
 
 ```sh
+cd src
 make
 ```
 
