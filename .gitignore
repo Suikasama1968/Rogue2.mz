@@ -1,0 +1,20 @@
+# MZ-1500 build products
+/src/*.o
+/src/*.mzt
+!/src/ROGUE.mzt
+/src/*.map
+/src/*.sym
+/src/ROGUE
+/src/ROGUE_OBJ
+
+# Original build products
+/rogue
+/autom4te.cache/
+/config.log
+/config.status
+/stamp-h1
+
+# Editor and tools
+.DS_Store
+__pycache__/
+*.pyc
