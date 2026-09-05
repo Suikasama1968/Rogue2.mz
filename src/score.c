@@ -9,19 +9,10 @@
  *         gain or profit.
  *
  */
-#include <stdio.h>
-
 #include "rogue.h"
 #include "message.h"
 #include "mz_curses.h"
 #include "score.h"
-
-static void center_ascii(short row, const char *text)
-{
-    short length = 0;
-    while (text[length]) ++length;
-    mvaddstr((u8)row, (u8)((40 - length) / 2), (const u8 *)text);
-}
 
 static short mz_display_length(const u8 *text)
 {
@@ -49,15 +40,16 @@ void killed_by(object *monster, short other)
     short i;
     short id;
     u8 text[40];
-    char stats[40];
+    u8 stats[48];
+    long values[3];
 
     game_over = 1;
     rogue.hp_current = 0;
     rogue.gold = rogue.gold * 9L / 10L;
     clear();
-    for (id = 411; id <= 424; ++id) {
+    for (id = 500; id <= 513; ++id) {
         (void)get_message(id, text, sizeof(text));
-        mvaddstr_mz((u8)(id - 408), 0, text);
+        mvaddstr((u8)(id - 497), 0, text);
     }
     length = 0;
     if (monster) {
@@ -76,12 +68,15 @@ void killed_by(object *monster, short other)
                              reason, sizeof(reason));
     }
     length = mz_display_length(reason);
-    mvaddstr_mz(12, (u8)((40 - length) / 2), reason);
-    sprintf(stats, "Level:%d Gold:%ld Exp:%ld", cur_level,
-            rogue.gold, rogue.exp_points);
-    center_ascii(18, stats);
-    (void)get_message(428, text, sizeof(text));
-    mvaddstr_mz(20, 0, text);
+    mvaddstr(12, (u8)((40 - length) / 2), reason);
+    values[0] = cur_level;
+    values[1] = rogue.gold;
+    values[2] = rogue.exp_points;
+    mz_sprintf(stats, "Level:%d Gold:%ld Exp:%ld", values);
+    length = mz_display_length(stats);
+    mvaddstr(18, (u8)((40 - length) / 2), stats);
+    (void)get_message(517, text, sizeof(text));
+    mvaddstr(20, 0, text);
     rogue.row = 0;
     rogue.col = 0;
     refresh();
@@ -97,13 +92,17 @@ void win(void)
 
     game_over = 1;
     clear();
-    center_ascii(3, "*** YOU WIN ***");
+    (void)get_message(519, text, sizeof(text));
+    length = mz_display_length(text);
+    mvaddstr(3, (u8)((40 - length) / 2), text);
     for (id = 182; id <= 185; ++id) {
         (void)get_message(id, text, sizeof(text));
         length = mz_display_length(text);
-        mvaddstr_mz((u8)(id - 176), (u8)((40 - length) / 2), text);
+        mvaddstr((u8)(id - 176), (u8)((40 - length) / 2), text);
     }
-    center_ascii(12, "Press Space");
+    (void)get_message(520, text, sizeof(text));
+    length = mz_display_length(text);
+    mvaddstr(12, (u8)((40 - length) / 2), text);
     rogue.row = 0;
     rogue.col = 0;
     refresh();

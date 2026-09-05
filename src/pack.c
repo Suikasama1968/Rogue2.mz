@@ -17,21 +17,11 @@
 #include "ring.h"
 #include "trap.h"
 
-static char next_pack_letter(object *pack)
-{
-    char letter;
-    object *obj;
+static void object_message(object *obj, short msg_id);
+static char next_pack_letter(object *pack);
 
-    for (letter = 'a'; letter <= 'z'; ++letter) {
-        for (obj = pack->next_object; obj; obj = obj->next_object) {
-            if (obj->ichar == letter) break;
-        }
-        if (!obj) return letter;
-    }
-    return '?';
-}
-
-object *add_to_pack(object *obj, object *pack, int condense)
+object
+*add_to_pack(object *obj, object *pack, int condense)
 {
     object *p = pack;
 
@@ -85,134 +75,8 @@ object *pick_up(int row, int col, short *status)
     return obj;
 }
 
-int pack_letter(char *prompt, unsigned short mask)
-{
-    object *obj;
-    int ch;
-
-    for (obj = rogue.pack.next_object; obj; obj = obj->next_object) {
-        if (obj->what_is & mask) break;
-    }
-    if (!obj) {
-        message_id_mz(93, 0);
-        return CANCEL;
-    }
-    if (prompt) message_mz((const u8 *)prompt, 0);
-    else if (mask == ALL_OBJECTS) message_id_mz(90, 0);
-    else if (mask == POTION) message_id_mz(231, 0);
-    else if (mask == SCROL) message_id_mz(245, 0);
-    else if (mask == WAND) message_id_mz(278, 0);
-    else if (mask == RING) message_id_mz(161, 0);
-    else if (mask == ARMOR) message_id_mz(97, 0);
-    else if (mask == WEAPON) message_id_mz(101, 0);
-    else message_id_mz(262, 0);
-    move((u8)rogue.row, (u8)rogue.col);
-    refresh();
-    ch = rgetchar();
-    check_message();
-    return (short)ch;
-}
-
-static void object_message(object *obj, short msg_id)
-{
-    char desc[ROGUE_COLUMNS];
-    short length;
-
-    get_desc(obj, desc, 0);
-    for (length = 0; desc[length] != '\0'; ++length) {}
-    get_message(msg_id, (u8 *)desc + length, ROGUE_COLUMNS - length);
-    message_mz((u8 *)desc, 0);
-}
-
-void unwear(object *obj)
-{
-    if (obj) obj->in_use_flags &= ~BEING_WORN;
-    rogue.armor = 0;
-    rogue.armor_class = 0;
-}
-
-void do_wear(object *obj)
-{
-    rogue.armor = obj;
-    obj->in_use_flags |= BEING_WORN;
-    rogue.armor_class = (short)obj->which_kind + 2;
-    if (obj->which_kind == 4 || obj->which_kind == 5) --rogue.armor_class;
-    rogue.armor_class += obj->d_enchant;
-}
-
-void take_off(void)
-{
-    object *obj = rogue.armor;
-
-    if (!obj) {
-        message_id_mz(95, 0);
-        return;
-    }
-    if (obj->is_cursed) {
-        message_id_mz(85, 0);
-        return;
-    }
-    unwear(obj);
-    object_message(obj, 94);
-    reg_move();
-}
-
-void wear(void)
-{
-    short ch;
-    object *obj;
-
-    if (rogue.armor) {
-        message_id_mz(96, 0);
-        return;
-    }
-    ch = (short)pack_letter(0, ARMOR);
-    if (ch == CANCEL) return;
-    obj = get_letter_object(ch);
-    if (!obj) message_id_mz(98, 0);
-    else if (obj->what_is != ARMOR) message_id_mz(99, 0);
-    else {
-        object_message(obj, 100);
-        do_wear(obj);
-        reg_move();
-    }
-}
-
-void unwield(object *obj)
-{
-    if (obj) obj->in_use_flags &= ~BEING_WIELDED;
-    rogue.weapon = 0;
-}
-
-void do_wield(object *obj)
-{
-    rogue.weapon = obj;
-    obj->in_use_flags |= BEING_WIELDED;
-}
-
-void wield(void)
-{
-    short ch = (short)pack_letter(0, WEAPON);
-    object *obj;
-
-    if (rogue.weapon && rogue.weapon->is_cursed) {
-        message_id_mz(85, 0);
-        return;
-    }
-    if (ch == CANCEL) return;
-    obj = get_letter_object(ch);
-    if (!obj) message_id_mz(102, 0);
-    else if (obj->what_is != WEAPON) message_id_mz(103, 0);
-    else if (obj == rogue.weapon) message_id_mz(106, 0);
-    else {
-        unwield(rogue.weapon);
-        object_message(obj, 107);
-        do_wield(obj);
-        reg_move();
-    }
-}
-
-void drop(void)
+void
+drop(void)
 {
     object *obj;
     object *new_obj;
@@ -263,6 +127,164 @@ void drop(void)
     reg_move();
 }
 
+int 
+pack_letter(char *prompt, unsigned short mask)
+{
+    object *obj;
+    int ch;
+
+    for (obj = rogue.pack.next_object; obj; obj = obj->next_object) {
+        if (obj->what_is & mask) break;
+    }
+    if (!obj) {
+        message_id_mz(93, 0);
+        return CANCEL;
+    }
+    if (prompt) message_mz((const u8 *)prompt, 0);
+    else if (mask == ALL_OBJECTS) message_id_mz(90, 0);
+    else if (mask == POTION) message_id_mz(231, 0);
+    else if (mask == SCROL) message_id_mz(245, 0);
+    else if (mask == WAND) message_id_mz(278, 0);
+    else if (mask == RING) message_id_mz(161, 0);
+    else if (mask == ARMOR) message_id_mz(97, 0);
+    else if (mask == WEAPON) message_id_mz(101, 0);
+    else message_id_mz(262, 0);
+    move((u8)rogue.row, (u8)rogue.col);
+    refresh();
+    ch = rgetchar();
+    check_message();
+    return (short)ch;
+}
+
+void
+take_off(void)
+{
+    object *obj = rogue.armor;
+
+    if (!obj) {
+        message_id_mz(95, 0);
+        return;
+    }
+    if (obj->is_cursed) {
+        message_id_mz(85, 0);
+        return;
+    }
+    unwear(obj);
+    object_message(obj, 94);
+    reg_move();
+}
+
+void
+wear(void)
+{
+    short ch;
+    object *obj;
+
+    if (rogue.armor) {
+        message_id_mz(96, 0);
+        return;
+    }
+    ch = (short)pack_letter(0, ARMOR);
+
+    if (ch == CANCEL) {
+        return;
+    }
+    if (!(obj = get_letter_object(ch))) {
+        message_id_mz(98, 0);
+        return;
+    }
+    if (obj->what_is != ARMOR) {
+        message_id_mz(99, 0);
+        return;
+    }
+    object_message(obj, 100);
+    do_wear(obj);
+    reg_move();
+
+}
+
+void
+unwear(object *obj)
+{
+    if (obj) {
+        obj->in_use_flags &= (~BEING_WORN);
+    }   
+    rogue.armor = 0;
+    rogue.armor_class = 0;
+}
+
+void
+do_wear(object *obj)
+{
+    rogue.armor = obj;
+    obj->in_use_flags |= BEING_WORN;
+
+    rogue.armor_class = (short)obj->which_kind + 2;
+    if (obj->which_kind == 4 || obj->which_kind == 5) --rogue.armor_class;
+    rogue.armor_class += obj->d_enchant;
+}
+
+void
+wield(void)
+{
+    short ch;
+    object *obj;
+
+    if (rogue.weapon && rogue.weapon->is_cursed) {
+        message_id_mz(85, 0);
+        return;
+    }
+    ch = (short)pack_letter(0, WEAPON);
+
+    if (ch == CANCEL) {
+        return;
+    }
+    if (!(obj = get_letter_object(ch))) {
+        message_id_mz(102, 0);
+        return;
+
+    }
+    if (obj->what_is & (ARMOR | RING)) {
+        message_id_mz((obj->what_is == ARMOR) ? 104 : 105, 0);
+        return;
+    }
+    if (obj == rogue.weapon) {
+        message_id_mz(106, 0);
+    } else {
+        unwield(rogue.weapon);
+        object_message(obj, 107);
+        do_wield(obj);
+        reg_move();
+    }
+}
+
+void
+do_wield(object *obj)
+{
+    rogue.weapon = obj;
+    obj->in_use_flags |= BEING_WIELDED;
+}
+
+void
+unwield(object *obj)
+{
+    if (obj) {
+        obj->in_use_flags &= (~BEING_WIELDED);
+    }
+    rogue.weapon = 0;
+}
+
+static void object_message(object *obj, short msg_id)
+{
+    char desc[ROGUE_COLUMNS];
+    short length;
+
+    get_desc(obj, desc, 0);
+    for (length = 0; desc[length] != '\0'; ++length) {}
+    get_message(msg_id, (u8 *)desc + length, ROGUE_COLUMNS - length);
+    message_mz((u8 *)desc, 0);
+}
+
 int has_amulet(void)
 {
     object *obj = rogue.pack.next_object;
@@ -272,4 +294,18 @@ int has_amulet(void)
         obj = obj->next_object;
     }
     return 0;
+}
+
+static char next_pack_letter(object *pack)
+{
+    char letter;
+    object *obj;
+
+    for (letter = 'a'; letter <= 'z'; ++letter) {
+        for (obj = pack->next_object; obj; obj = obj->next_object) {
+            if (obj->ichar == letter) break;
+        }
+        if (!obj) return letter;
+    }
+    return '?';
 }

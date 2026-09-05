@@ -7,7 +7,6 @@
  *         gain or profit.
  *
  */
-#include <stdio.h>
 #include <string.h>
 
 #include "rogue.h"
@@ -16,9 +15,7 @@
 #include "mz_curses.h"
 #include "mz_system.h"
 
-#define MESSAGE_BUFFER_SIZE 80
-
-static u8 message_buffer[MESSAGE_BUFFER_SIZE];
+#define message_buffer ((u8 *)MESSAGE_BUFFER_ADDR)
 static boolean msg_cleared = 1;
 char hunger_str[8] = "";
 extern short add_strength;
@@ -48,12 +45,13 @@ static const u8 *find_message(short msg_id, u8 *length)
 
 void print_stats(int stat_mask)
 {
-    char line1[41];
-    char line2[41];
+    u8 line1[48];
+    u8 line2[48];
     u8 *status1 = dungeon + ROGUE_COLUMNS * STATUS_ROW_1;
     u8 *status2 = dungeon + ROGUE_COLUMNS * STATUS_ROW_2;
     u8 *attr1 = dungeon_attr + ROGUE_COLUMNS * STATUS_ROW_1;
     u8 *attr2 = dungeon_attr + ROGUE_COLUMNS * STATUS_ROW_2;
+    long values[5];
 
     /* 40列版では2行を一体で整形するため、指定項目を含む全体を再描画する。 */
     (void)stat_mask;
@@ -61,14 +59,20 @@ void print_stats(int stat_mask)
     memset(status2, TILE_ROCK, ROGUE_COLUMNS);
     memset(attr1, ATTR_VISIBLE, ROGUE_COLUMNS);
     memset(attr2, ATTR_VISIBLE, ROGUE_COLUMNS);
-    sprintf(line1, "Level:%u Gold:%ld Hp:%d(%d) ", cur_level,
-            rogue.gold, rogue.hp_current, rogue.hp_max);
-    sprintf(line2, "Str:%d(%d) Arm:%d Exp:%d/%ld",
-            rogue.str_current + add_strength, rogue.str_max, rogue.armor_class,
-            rogue.exp, rogue.exp_points);
-    mvaddstr(STATUS_ROW_1, 0, (const u8 *)line1);
-    addstr_mz((const u8 *)hunger_str);
-    mvaddstr(STATUS_ROW_2, 0, (const u8 *)line2);
+    values[0] = cur_level;
+    values[1] = rogue.gold;
+    values[2] = rogue.hp_current;
+    values[3] = rogue.hp_max;
+    mz_sprintf(line1, "Level:%u Gold:%ld Hp:%d(%d) ", values);
+    values[0] = rogue.str_current + add_strength;
+    values[1] = rogue.str_max;
+    values[2] = rogue.armor_class;
+    values[3] = rogue.exp;
+    values[4] = rogue.exp_points;
+    mz_sprintf(line2, "Str:%d(%d) Arm:%d Exp:%d/%ld", values);
+    mvaddstr(STATUS_ROW_1, 0, line1);
+    addstr((const u8 *)hunger_str);
+    mvaddstr(STATUS_ROW_2, 0, line2);
 }
 
 short get_message(short msg_id, u8 *buffer, short size)
@@ -97,7 +101,7 @@ void message_mz(const u8 *msg, boolean intrpt)
 
     (void)intrpt;
     move(MESSAGE_ROW, 0);
-    addstr_mz(msg);
+    addstr(msg);
     while (*p != '\0') {
         if (*p != MZ_STR_CSET_0 && *p != MZ_STR_CSET_1) ++length;
         ++p;

@@ -8,6 +8,8 @@
  *
  */
 #include "rogue.h"
+#include "display.h"
+#include "mz_curses.h"
 #include "move.h"
 #include "object.h"
 #include "random.h"
@@ -24,9 +26,10 @@ void light_up_room(int rn)
         (rooms[rn].is_room & R_MAZE)) return;
     for (row = rooms[rn].top_row; row <= rooms[rn].bottom_row; ++row) {
         for (col = rooms[rn].left_col; col <= rooms[rn].right_col; ++col) {
-            DUNGEON_ATTR(row, col) = ATTR_VISIBLE;
+            colorize_dungeon((short)row, (short)col);
         }
     }
+    attrset(A_NORMAL);
 }
 
 void light_passage(int row, int col)
@@ -41,10 +44,11 @@ void light_passage(int row, int col)
     for (r = first_row; r <= last_row; ++r) {
         for (c = first_col; c <= last_col; ++c) {
             if (can_move(row, col, r, c)) {
-                DUNGEON_ATTR(r, c) = ATTR_VISIBLE;
+                colorize_dungeon((short)r, (short)c);
             }
         }
     }
+    attrset(A_NORMAL);
 }
 
 void darken_room(short rn)

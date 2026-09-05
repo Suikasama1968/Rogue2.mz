@@ -17,6 +17,7 @@
 #include "init.h"
 #include "main.h"
 #include "message.h"
+#include "display.h"
 #include "object.h"
 #include "pack.h"
 #include "random.h"
@@ -49,6 +50,7 @@ init(int argc, char *argv[])
         BANK_ROM();
         return 1;
     } 
+    init_color_attr();
     
     level_objects.next_object = 0;
     level_monsters.next_object = 0;
@@ -65,6 +67,7 @@ player_init(void)
     object *obj;
 
     rogue.pack.next_object = 0;
+    identified_potions = 0;
 
     obj = alloc_object();
     get_food(obj, 1);

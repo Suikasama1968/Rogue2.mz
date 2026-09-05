@@ -15,11 +15,11 @@
 void BANK_VRAM() __naked
 {
 #asm
-    ld      hl, BANK_MODE
-    ld      (hl), 0xe3       ; BANK_MODE = 0xe3 (VRAM)
-    inc     hl
+;    ld      hl, BANK_MODE
+;    ld      (hl), 0xe3       ; BANK_MODE = 0xe3 (VRAM)
+;    inc     hl
     xor     a
-    ld      (hl), a          ; BANK_NUM = 0
+;    ld      (hl), a          ; BANK_NUM = 0
 
     out     (0xe3), a        ; A=0 → VRAMバンク
 

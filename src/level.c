@@ -9,7 +9,6 @@
  *         gain or profit.
  *
  */
-#include <stdio.h>
 #include <string.h>
 #include "rogue.h"
 #include "level.h"
@@ -467,9 +466,8 @@ add_exp(int e, boolean promotion)
 {
     short new_exp;
     short hp;
-    short i;
-    char number[8];
     u8 mz_number[8];
+    long value;
 
     rogue.exp_points += e;
     if (rogue.exp_points > MAX_EXP) rogue.exp_points = MAX_EXP + 1;
@@ -481,11 +479,8 @@ add_exp(int e, boolean promotion)
             rogue.hp_current += hp;
             rogue.hp_max += hp;
         }
-        sprintf(number, "%d", rogue.exp);
-        for (i = 0; number[i] != '\0'; ++i) {
-            mz_number[i] = (u8)ascii_to_mz((u8)number[i]);
-        }
-        mz_number[i] = '\0';
+        value = rogue.exp;
+        mz_sprintf(mz_number, "%d", &value);
         message_id_mz(53, mz_number);
     }
 }

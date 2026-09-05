@@ -21,48 +21,52 @@ extern "C" {
 #define SYSTEM_WORK     LOW_RAM_BEGIN
 
 // キー入力結果格納先 (10バイト)
-#define KEYDATA         SYSTEM_WORK + 0x0000
+#define KEYDATA         (SYSTEM_WORK + 0x0000)
+#define KEYDATA_SIZE    0x000a
 
-#define LOOP_COUNT      SYSTEM_WORK + 0x000a
-#define TIME_COUNT      SYSTEM_WORK + 0x000b
+#define LOOP_COUNT      (SYSTEM_WORK + 0x000a)
+#define TIME_COUNT      (SYSTEM_WORK + 0x000b)
 
 // 割り込み処理情報格納先
-#define VECTOR  	    SYSTEM_WORK + 0x0010
-#define TIMER   	    SYSTEM_WORK + 0x0012
-#define COUNTER 	    SYSTEM_WORK + 0x0014
+#define VECTOR  	    (SYSTEM_WORK + 0x0010)
+#define TIMER   	    (SYSTEM_WORK + 0x0012)
+#define COUNTER 	    (SYSTEM_WORK + 0x0014)
 #define MSec    	    895
 
 // バンク切替状態保存先
-#define BANK_MODE       SYSTEM_WORK + 0x0020
-#define BANK_NUM        SYSTEM_WORK + 0x0021
+#define BANK_MODE       (SYSTEM_WORK + 0x0020)
+#define BANK_NUM        (SYSTEM_WORK + 0x0021)
 
 // デバッグ用
-#define FUNC_TRACE      SYSTEM_WORK + 0x0030
-#define ISR_COUNT       SYSTEM_WORK + 0x0040
+#define FUNC_TRACE      (SYSTEM_WORK + 0x0030)
+#define ISR_COUNT       (SYSTEM_WORK + 0x0040)
 
-// フリーエリア : 0x0100-0x0xfff
+// プログラム情報 格納アドレス : 0x0100-0x0xfff
+#define PROGRAM_WORK        0x0100
+
 // オブジェクト
-#define OBJECT_POOL_ADDR    0x0100
+#define OBJECT_POOL_ADDR    (PROGRAM_WORK + 0x0000)
 #define OBJECT_POOL_SIZE    0x0400
-#define OBJECT_USED_ADDR    0x0500
+#define OBJECT_USED_ADDR    (PROGRAM_WORK + 0x0400)
 #define OBJECT_USED_SIZE    0x0020
 // モンスター
-#define MONSTER_POOL_ADDR   0x0520
+#define MONSTER_POOL_ADDR   (PROGRAM_WORK + 0x0420)
 #define MONSTER_POOL_SIZE   0x0260
-#define MONSTER_USED_ADDR   0x0780
+#define MONSTER_USED_ADDR   (PROGRAM_WORK + 0x0680)
 #define MONSTER_USED_SIZE   0x0020
 // 画面バックアップ
-#define DESCS_TEXT_ADDR     0x07a0
+#define DESCS_TEXT_ADDR     (PROGRAM_WORK + 0x06a0)
 #define DESCS_TEXT_SIZE     0x0168
-#define DESCS_ATTR_ADDR     0x0908
+#define DESCS_ATTR_ADDR     (PROGRAM_WORK + 0x0808)
 #define DESCS_ATTR_SIZE     0x0168
-// ルームテーブル */
-#define ROOMS_ADDR          0x0a70
+// ルームテーブル
+#define ROOMS_ADDR          (PROGRAM_WORK + 0x0970)
 #define ROOMS_SIZE          0x01b0
 
-// 今後のゲームロジック用予約領域 : 0x0c20-0x0fff
-#define GAME_WORK_ADDR      0x0c20
-#define GAME_WORK_SIZE      0x03e0
+// メッセージ展開用バッファ
+#define MESSAGE_BUFFER_ADDR (PROGRAM_WORK + 0x0b20)
+#define MESSAGE_BUFFER_SIZE 0x0050
+
 
 // メモリマップドI/O
 #define _8255_PORT_A    0xe000

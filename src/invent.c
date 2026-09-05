@@ -68,7 +68,7 @@ void inventory(object *pack, unsigned short mask)
                 memset(dungeon_attr +
                        (unsigned int)(row + 1) * ROGUE_COLUMNS + col,
                        0x70, 40);
-                mvaddstr_mz((u8)(row + 1), col, line);
+                mvaddstr((u8)(row + 1), col, line);
                 ++row;
             }
             obj = obj->next_object;
@@ -78,7 +78,8 @@ void inventory(object *pack, unsigned short mask)
         memset(dungeon_attr +
                (unsigned int)(rows + 1) * ROGUE_COLUMNS + col, 0x70, 40);
 
-        mvaddstr((u8)(rows + 1), col, (const u8 *)" --Push Space--");
+        (void)get_message(518, line, sizeof(line));
+        mvaddstr((u8)(rows + 1), col, line);
         move((u8)rogue.row, (u8)rogue.col);
         refresh();
         while (rgetchar() != ' ') {}
@@ -146,14 +147,16 @@ void get_desc(object *obj, char *desc, boolean capitalized)
             buffer[0] = '\0';
         }
         length = append_message(buffer, length,
-                                (short)(334 + obj->which_kind));
+                    (short)(((identified_potions &
+                              (unsigned short)(1U << obj->which_kind)) != 0
+                             ? 348 : 334) + obj->which_kind));
         append_message(buffer, length, 4);
         return;
     }
     if (obj->what_is == SCROL) {
         if (obj->quantity > 1) length = append_message(buffer, length, 32);
         else { length = 0; buffer[0] = '\0'; }
-        append_message(buffer, length, 410);
+        append_message(buffer, length, 454);
         return;
     }
     if (obj->what_is == WAND) {

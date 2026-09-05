@@ -2,6 +2,8 @@
  * mz_curses.c
  *
  * 簡易版Unix CURSES互換関数 for MZ-1500
+ *  文字コードはMZ-700/1500のディスプレイコードを指定する
+ *  エラーハンドリングは行わない
  * Copyright (c) 2026 Suikasama1968
  */
 
@@ -13,14 +15,46 @@
 #include "mz_system.h"
 
 static WINDOW main_window;
+static u8 color_pairs[16];
 
 u8 *Key =(u8 *)KEYDATA;
 
-WINDOW *initscr(void) { clear(); return &main_window; }
+/*
+    ウィンドウの初期化
+*/
+WINDOW *initscr(void)
+{
+    color_pairs[0] = 0x70;
+    main_window._attrs = color_pairs[0];
+    clear();
+    return &main_window;
+}
+
+/* 
+    色のペアーの定義を変更する
+*/
+int init_pair(short pair, short fg, short bg)
+{
+    static const u8 mz_color[8] = { 0, 2, 4, 6, 1, 3, 5, 7 };
+
+    color_pairs[pair] = (u8)((mz_color[fg] << 4) | mz_color[bg]);
+    return 0;
+}
 
 /*
-    画面クリア
-    実画面と仮想画面を初期化する。
+    属性を設定する    
+*/
+int attrset(attr_t attrs)
+{
+    u8 pair = (u8)attrs;
+
+    main_window._attrs = color_pairs[pair];
+    return 0;
+}
+
+/*
+    ウィンドウをクリアする
+    実画面と仮想画面を初期化
 */
 int clear(void)
 {
@@ -30,47 +64,45 @@ int clear(void)
 
     return move(0, 0);
 }
+
 /*
     現在のカーソル位置から行末までをスペースで埋める
 */
 int clrtoeol(void)
 {
-    u8 *addr = main_window.cur_addr;
-    u8 *attr = main_window.cur_attr;
+    u8 *addr = main_window._cur_addr;
+    u8 *attr = main_window._cur_attr;
 
     memset(addr, DC_SPC, V_COLUMN - main_window._curx);
     memset(attr, 0x70, V_COLUMN - main_window._curx);
     return 0;
 }
+
 /*
     現在のカーソル位置からすべての行をスペースで埋める
 */
-
 int clrtobot(void)
 {
-    u8 *addr = main_window.cur_addr;
-    u8 *attr = main_window.cur_attr;
+    u8 *addr = main_window._cur_addr;
+    u8 *attr = main_window._cur_attr;
 
     memset(addr, DC_SPC, 0xc800 - (u16)addr);
-    memset(attr, 0x70,   0xd000 - (u16)attr);
+    memset(attr, 0x70, 0xd000 - (u16)attr);
     return 0;
 }
 /*
-    仮想画面上のカーソル位置を指定する
+    カーソルを移動する
 */
 int move(u8 y, u8 x)
 {
-    if (y < V_ROW && x < V_COLUMN) {
         main_window._cury = (u8)y;
         main_window._curx = (u8)x;
-        main_window.cur_addr = (u8 *)(TEXT_V_VRAM + y * V_COLUMN + x);
-        main_window.cur_attr = (u8 *)(TEXT_V_ATTR + y * V_COLUMN + x);
+        main_window._cur_addr = (u8 *)(TEXT_V_VRAM + y * V_COLUMN + x);
+        main_window._cur_attr = (u8 *)(TEXT_V_ATTR + y * V_COLUMN + x);
         return 0;
-    }
-    return -1;
 }
 /*
-    1文字を表示する 
+    ウィンドウの現在の位置に文字を一文字書く 
     chにはMZ-1500のディスプレイコードを指定する
     上位8bitはアトリビュート、下位8bitは文字コード
     指定方法 
@@ -81,66 +113,35 @@ int addch(u16 ch)
 {
     u8 attr;
 
-    if (main_window._curx >= V_COLUMN || main_window._cury >= V_ROW) return -1;
     attr = (u8)(ch >> 8);
-    main_window.cur_addr[0] = (u8)ch;
+    main_window._cur_addr[0] = (u8)ch;
     if ((attr & 0x7f) == 0) {
-        attr |= (u8)((DC_FG_WHITE | DC_BG_BLACK) >> 8);
+        attr |= main_window._attrs;
     }
-    main_window.cur_attr[0] = attr;
+    main_window._cur_attr[0] = attr;
     main_window._curx++;
-    main_window.cur_addr++;
-    main_window.cur_attr++;
+    main_window._cur_addr++;
+    main_window._cur_attr++;
     return 0;
 }
 /*
-    カーソル位置を指定して文字を表示する
+    カーソル位置を指定して文字を画面に書く
     chにはMZ-1500のディスプレイコードを指定する
 */
 int mvaddch(u8 y, u8 x, u16 ch)
 {
-    if (move(y, x) != 0) return -1;
+    move(y, x);
     return addch(ch); 
 }
-/*
-    文字列を表示する 
-    strにはASCIIコードを指定する
-    文字列の終端はNULL文字('\0')で指定する
-    将来的に文字列はACIIコードからMZ-1500のディスプレイコードに変換したものを用意して表示するようにする
-    いまは、プログラミングの都合上ASCIIコードをMZ-1500のディスプレイコードに変換して表示する
+
+/* 
+    ウィンドウの現在のカーソル位置に文字列を追加 
 */
 int addstr(const u8 *str)
 {
-    int dcode;
-
-    while (*str != '\0' && main_window._curx < V_COLUMN) {
-        dcode = ascii_to_mz(*str);
-        main_window.cur_addr[0] = (u8)dcode ;
-        main_window.cur_attr[0] = (u8)(dcode >> 8);
-        main_window._curx++;
-        main_window.cur_addr++;
-        main_window.cur_attr++;
-        str++;
-    }
-    return 0;
-}
-/*
-    カーソル位置を指定して文字列を表示する
-    strにはASCIIコードを指定する
-    文字列の終端はNULL文字('\0')で指定する
-*/
-int mvaddstr(u8 y, u8 x, const u8 *str)
-{
-    if (move(y, x) != 0) return -1;
-    return addstr(str); 
-}
-
-/* MZ-1500のディスプレイコード文字列をそのまま仮想画面へ書く。 */
-int addstr_mz(const u8 *str)
-{
     u16 cset = DC_CSET_1;
 
-    while (*str != '\0' && main_window._curx < V_COLUMN) {
+    while (*str != '\0') {
         u16 ch;
 
         if (*str == DC_NICOCHAN_0) { // 英大文字・カタカナモード
@@ -153,37 +154,41 @@ int addstr_mz(const u8 *str)
             ++str;
             continue;
         }
-        ch = (u16)*str++ | cset | DC_FG_WHITE | DC_BG_BLACK;
-        if (addch(ch) != 0) return -1;
+        ch = (u16)*str++ | cset | ((u16)main_window._attrs << 8);
+        addch(ch);
     }
     return 0;
 }
 
-int mvaddstr_mz(u8 y, u8 x, const u8 *str)
+int mvaddstr(u8 y, u8 x, const u8 *str)
 {
-    if (move(y, x) != 0) return -1;
-    return addstr_mz(str);
+    move(y, x);
+    return addstr(str);
 }
 
-/* 終端を持たないMZ-1500ディスプレイコード列を指定文字数だけ書く。 */
-int addnstr_mz(const u8 *str, u8 length)
+/* 
+    ウィンドウの現在のカーソル位置に文字列から最大n文字（またはバイト）を追加
+*/
+int addnstr(const u8 *str, u8 length)
 {
-    while (length-- && main_window._curx < V_COLUMN) {
-        if (addch((u16)*str++) != 0) return -1;
+    while (length--) {
+        addch((u16)*str++);
     }
     return 0;
 }
 
-int mvaddnstr_mz(u8 y, u8 x, const u8 *str, u8 length)
+int mvaddnstr(u8 y, u8 x, const u8 *str, u8 length)
 {
-    if (move(y, x) != 0) return -1;
-    return addnstr_mz(str, length);
+    move(y, x);
+    return addnstr(str, length);
 }
+
 /*
+    画面を更新する
     仮想画面から実画面への描画を行う
-    仮想画面は80x25、そのうちの40x25を実画面に転送する
-    3画面切り替え
-    描画範囲は_curxで決める
+     仮想画面は80x25、そのうちの40x25を実画面に転送する
+     3画面切り替え
+     描画範囲は_curxで決める
 */
 int refresh(void)
 {
@@ -195,11 +200,9 @@ int refresh(void)
     } else if (main_window._curx < 50) {
         // 20~59列目までを実画面に転送表示する
         from_addr = (u8 *)(TEXT_V_VRAM + 20);
-    } else if (main_window._curx < V_COLUMN) {
+    } else {
         // 40~79列目までを実画面に転送表示する
         from_addr = (u8 *)(TEXT_V_VRAM + 40);
-    } else {
-        return -1;
     }
     /* 固定行を含む25行すべてをVRAM_Display()内で転送する。 */
     VRAM_Display(from_addr);

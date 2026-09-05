@@ -56,6 +56,8 @@ ASCII_MACROS = {
 }
 ASCII_MACROS.update({chr(code): "DC_" + chr(code).upper()
                      for code in range(ord("a"), ord("z") + 1)})
+ASCII_MACROS.update({chr(code): "DC_" + chr(code)
+                     for code in range(ord("A"), ord("Z") + 1)})
 
 MESSAGE_FORMAT_STRING = 0xFE
 MESSAGE_CSET_1 = 0xCE
@@ -114,6 +116,14 @@ def encode_message(text, values, line_no):
                 encoded.append(MESSAGE_CSET_0)
                 katakana = True
             char = chr(ord(char) - 0x60)
+        elif "A" <= char <= "Z":
+            if not katakana:
+                encoded.append(MESSAGE_CSET_0)
+                katakana = True
+        elif "a" <= char <= "z":
+            if katakana:
+                encoded.append(MESSAGE_CSET_1)
+                katakana = False
         elif (char in KANA_MACROS or char in VOICED or
               char in SEMI_VOICED) and char != "ー":
             if katakana:

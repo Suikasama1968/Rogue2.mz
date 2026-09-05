@@ -8,6 +8,8 @@
  *
  */
 #include "rogue.h"
+#include "display.h"
+#include "mz_curses.h"
 #include "level.h"
 #include "message.h"
 #include "monster.h"
@@ -70,6 +72,7 @@ quaff(void)
         add_exp(1, 1);
         break;
     }
+    identified_potions |= (unsigned short)(1U << obj->which_kind);
     print_stats(STAT_STRENGTH | STAT_HP);
     vanish(obj, 1, &rogue.pack);
 }
@@ -153,9 +156,10 @@ read_scroll(void)
         for (row = MIN_ROW; row <= MAX_ROW; ++row) {
             for (col = 0; col < ROGUE_COLUMNS; ++col) {
                 if (DUNGEON(row,col) != TILE_ROCK)
-                    DUNGEON_ATTR(row,col) = ATTR_VISIBLE;
+                    colorize_dungeon(row, col);
             }
         }
+        attrset(A_NORMAL);
         message_id_mz(259, 0);
         break;
     }

@@ -29,6 +29,7 @@ typedef char object_used_size_check[
 static short foods;
 short party_counter;
 object level_objects;
+unsigned short identified_potions;
 fighter rogue = {
     0,                          /* gold */
     INIT_HP,                    /* Hp current */

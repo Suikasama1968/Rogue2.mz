@@ -7,6 +7,74 @@
 #include "mz_common.h"
 #include "mz_display.h"
 
+static u8 *mz_put_ulong(u8 *dst, unsigned long value)
+{
+    u8 work[10];
+    u8 length = 0;
+
+    do {
+        work[length++] = (u8)(DC_0 + value % 10);
+        value /= 10;
+    } while (value);
+    while (length) *dst++ = work[--length];
+    return dst;
+}
+
+static u8 *mz_put_long(u8 *dst, long value)
+{
+    unsigned long magnitude;
+
+    if (value < 0) {
+        *dst++ = DC_MINUS;
+        magnitude = (unsigned long)(-(value + 1)) + 1;
+    } else {
+        magnitude = (unsigned long)value;
+    }
+    return mz_put_ulong(dst, magnitude);
+}
+
+static u8 *mz_put_ascii(u8 *dst, u8 ch, u8 *cset)
+{
+    u8 next_cset = *cset;
+
+    if (ch >= 'A' && ch <= 'Z') next_cset = 0;
+    else if (ch >= 'a' && ch <= 'z') next_cset = 1;
+    if (next_cset != *cset) {
+        *dst++ = next_cset ? DC_NICOCHAN_1 : DC_NICOCHAN_0;
+        *cset = next_cset;
+    }
+    *dst++ = (u8)ascii_to_mz(ch);
+    return dst;
+}
+
+/* %d, %u, %ldをMZ-1500ディスプレイコードへ直接整形する。 */
+int mz_sprintf(u8 *dst, const char *format, const long *values)
+{
+    u8 *start = dst;
+    u8 cset = 1;
+
+    while (*format) {
+        if (*format != '%') {
+            dst = mz_put_ascii(dst, (u8)*format++, &cset);
+            continue;
+        }
+        ++format;
+        if (*format == 'l') {
+            ++format;
+        }
+        if (*format == 'd') {
+            dst = mz_put_long(dst, *values++);
+        } else if (*format == 'u') {
+            dst = mz_put_ulong(dst, (unsigned long)*values++);
+        } else {
+            dst = mz_put_ascii(dst, (u8)*format, &cset);
+        }
+        if (*format) ++format;
+    }
+    *dst = '\0';
+    return (int)(dst - start);
+}
+
 /*
     ASCII文字をMZ-1500のディスプレイコードに変換 
     上位8bitはアトリビュート、下位8bitは文字コード

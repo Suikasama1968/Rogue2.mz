@@ -23,5 +23,6 @@ extern void rand_place(object *obj);
 extern void clear_level_objects(void);
 extern void make_party(void);
 extern int next_party(void);
+extern unsigned short identified_potions;
 
 #endif /* not __OBJECT_H__ */

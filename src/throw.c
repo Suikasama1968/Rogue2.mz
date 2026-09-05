@@ -108,7 +108,7 @@ get_thrown_at_monster(object *obj, short dir, short *row, short *col)
             return 0;
         }
         if (monster_at(*row, *col)) return monster_at(*row, *col);
-        if (DUNGEON_ATTR(*row, *col) == ATTR_VISIBLE) {
+        if (DUNGEON_ATTR(*row, *col) != ATTR_HIDDEN) {
             tile = DUNGEON(*row, *col);
             mvaddch((u8)*row, (u8)*col, DC_R_BLACKET);
             move((u8)rogue.row, (u8)rogue.col);
