@@ -16,6 +16,7 @@
 #include "rogue.h"
 #include "init.h"
 #include "main.h"
+#include "machdep.h"
 #include "message.h"
 #include "display.h"
 #include "object.h"
@@ -29,6 +30,8 @@
 int
 init(int argc, char *argv[])
 {
+
+    int seed;
     WINDOW *main_window;
 
     (void)argc;
@@ -51,6 +54,9 @@ init(int argc, char *argv[])
         return 1;
     } 
     init_color_attr();
+
+    seed = md_gseed();
+    (void) srrandom(seed);
     
     level_objects.next_object = 0;
     level_monsters.next_object = 0;
@@ -111,6 +117,5 @@ byebye(int sig)
 
     message_id_mz(12, 0);
     refresh();
-    BANK_ROM();
-    exit(0);
+    md_exit(0);
 }

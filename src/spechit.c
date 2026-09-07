@@ -10,14 +10,69 @@
  *
  */
 #include "rogue.h"
+#include "invent.h"
 #include "message.h"
+#include "monster.h"
+#include "pack.h"
 #include "random.h"
+#include "score.h"
 #include "spechit.h"
+#include "use.h"
+
+static void disappear(object *monster);
 
 void
 special_hit(object *monster)
 {
+    if ((monster->m_flags & CONFUSED) && rand_percent(66)) return;
+    if (monster->m_flags & RUSTS) rust(monster);
+    if (monster->m_flags & FREEZES) freeze(monster);
     if (monster->m_flags & STINGS) sting(monster);
+    if (monster->m_flags & STEALS_GOLD) steal_gold(monster);
+    else if (monster->m_flags & STEALS_ITEM) steal_item(monster);
+}
+
+void
+rust(object *monster)
+{
+    if (!rogue.armor || rogue.armor_class <= 1 ||
+        rogue.armor->which_kind == LEATHER) return;
+    if (rogue.armor->is_protected) {
+        if (!(monster->m_flags & RUST_VANISHED)) {
+            message_id_mz(201, 0);
+            monster->m_flags |= RUST_VANISHED;
+        }
+    } else {
+        --rogue.armor->d_enchant;
+        --rogue.armor_class;
+        message_id_mz(202, 0);
+        print_stats(STAT_ARMOR);
+    }
+}
+
+void
+freeze(object *monster)
+{
+    short freeze_percent = 99;
+    short i;
+    short n;
+
+    if (rand_percent(12)) return;
+    freeze_percent -= rogue.str_current + rogue.str_current / 2;
+    freeze_percent -= rogue.exp * 4;
+    freeze_percent -= rogue.armor_class * 5;
+    freeze_percent -= rogue.hp_max / 3;
+    if (freeze_percent <= 10) return;
+    monster->m_flags |= FREEZING_ROGUE;
+    message_id_mz(203, 0);
+    n = (short)get_rand(4, 8);
+    for (i = 0; i < n && !game_over; ++i) mv_mons();
+    if (!game_over && rand_percent(freeze_percent)) {
+        for (i = 0; i < 50 && !game_over; ++i) mv_mons();
+        if (!game_over) killed_by(0, HYPOTHERMIA);
+    }
+    if (!game_over) message_id_mz(66, 0);
+    monster->m_flags &= ~FREEZING_ROGUE;
 }
 
 void
@@ -35,4 +90,55 @@ sting(object *monster)
         --rogue.str_current;
         print_stats(STAT_STRENGTH);
     }
+}
+
+void
+steal_gold(object *monster)
+{
+    long amount;
+
+    if (rogue.gold <= 0 || rand_percent(10)) return;
+    amount = get_rand(cur_level * 10, cur_level * 30);
+    if (amount > rogue.gold) amount = rogue.gold;
+    rogue.gold -= amount;
+    message_id_mz(204, 0);
+    print_stats(STAT_GOLD);
+    disappear(monster);
+}
+
+void
+steal_item(object *monster)
+{
+    object *obj;
+    object *chosen = 0;
+    short count = 0;
+    short quantity = 0;
+    short length;
+    u8 desc[ROGUE_COLUMNS];
+
+    if (rand_percent(15)) return;
+    for (obj = rogue.pack.next_object; obj; obj = obj->next_object) {
+        if (!(obj->in_use_flags & BEING_USED) &&
+            get_rand(1, ++count) == 1) chosen = obj;
+    }
+    if (chosen) {
+        if (chosen->what_is != WEAPON) {
+            quantity = chosen->quantity;
+            chosen->quantity = 1;
+        }
+        get_desc(chosen, (char *)desc, 0);
+        length = 0;
+        while (desc[length]) ++length;
+        get_message(205, desc + length, ROGUE_COLUMNS - length);
+        message_mz(desc, 0);
+        chosen->quantity = (chosen->what_is != WEAPON) ? quantity : 1;
+        vanish(chosen, 0, &rogue.pack);
+    }
+    disappear(monster);
+}
+
+static void
+disappear(object *monster)
+{
+    remove_monster(monster);
 }

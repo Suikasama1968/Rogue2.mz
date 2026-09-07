@@ -4,6 +4,8 @@
 import argparse
 import re
 import struct
+import subprocess
+import tempfile
 from pathlib import Path
 
 
@@ -52,7 +54,7 @@ ASCII_MACROS = {
     ")": "DC_R_BLACKET", "[": "DC_L_SQ_BLACKET",
     "]": "DC_R_SQ_BLACKET", "/": "DC_SLASH",
     "\\": "DC_BACK_SLASH", "_": "DC_D_BAR", "|": "DC_PIPE",
-    "*": "DC_STAR",
+    "*": "DC_STAR", "@": "DC_AT",
 }
 ASCII_MACROS.update({chr(code): "DC_" + chr(code).upper()
                      for code in range(ord("a"), ord("z") + 1)})
@@ -64,6 +66,22 @@ MESSAGE_CSET_1 = 0xCE
 MESSAGE_CSET_0 = 0xCF
 MZT_HEADER_SIZE = 128
 MZT_ATTRIBUTE_MACHINE_CODE = 0x01
+MONSTER_RECORD_SIZE = 38
+
+MONSTER_FLAGS = {
+    "HASTED": 0o1, "SLOWED": 0o2, "INVISIBLE": 0o4,
+    "ASLEEP": 0o10, "WAKENS": 0o20, "WANDERS": 0o40,
+    "FLIES": 0o100, "FLITS": 0o200, "CAN_FLIT": 0o400,
+    "CONFUSED": 0o1000, "RUSTS": 0o2000, "HOLDS": 0o4000,
+    "FREEZES": 0o10000, "STEALS_GOLD": 0o20000,
+    "STEALS_ITEM": 0o40000, "STINGS": 0o100000,
+    "DRAINS_LIFE": 0o200000, "DROPS_LEVEL": 0o400000,
+    "SEEKS_GOLD": 0o1000000, "FREEZING_ROGUE": 0o2000000,
+    "RUST_VANISHED": 0o4000000, "CONFUSES": 0o10000000,
+    "IMITATES": 0o20000000, "FLAMES": 0o40000000,
+    "STATIONARY": 0o100000000, "NAPPING": 0o200000000,
+    "ALREADY_MOVED": 0o400000000,
+}
 
 
 def read_defines(path):
@@ -154,19 +172,84 @@ def encode_message(text, values, line_no):
 def make_message_image(messages):
     data = []
     entries = []
+    data_offset = (len(messages) + 1) * 5
     for msg_id, encoded in messages:
-        entries.append((msg_id, len(data), len(encoded)))
+        entries.append((msg_id, data_offset + len(data), len(encoded)))
         data.extend(encoded)
         data.append(0)
-    if len(entries) > 255:
-        raise ValueError("message count exceeds 255")
-    data_offset = 8 + len(entries) * 5
-    image = bytearray(b"MZMG")
-    image.extend((len(entries), 1))
-    image.extend(struct.pack("<H", data_offset))
+    image = bytearray()
     for msg_id, offset, length in entries:
         image.extend(struct.pack("<HHB", msg_id, offset, length))
+    image.extend(struct.pack("<HHB", 0xffff, 0, 0))
     image.extend(data)
+    return image
+
+
+def parse_damage(value, line_no):
+    result = []
+    for dice in value.split("/"):
+        match = re.fullmatch(r"(\d+)d(\d+)", dice)
+        if not match:
+            raise ValueError(f"monster line {line_no}: invalid damage {value!r}")
+        result.extend((int(match.group(1)), int(match.group(2))))
+    if len(result) == 2:
+        result.extend((0, 0))
+    if len(result) != 4 or any(number > 255 for number in result):
+        raise ValueError(f"monster line {line_no}: invalid damage {value!r}")
+    return result
+
+
+def parse_monsters(path, display_values):
+    records = []
+    for line_no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        line = line.partition("#")[0].strip()
+        if not line:
+            continue
+        fields = line.split()
+        if len(fields) != 10:
+            raise ValueError(f"monster line {line_no}: expected 10 fields")
+        letter, flag_text, damage = fields[:3]
+        if len(letter) != 1 or not "A" <= letter <= "Z":
+            raise ValueError(f"monster line {line_no}: invalid letter {letter!r}")
+        try:
+            flags = sum(MONSTER_FLAGS[name] for name in flag_text.split("|"))
+        except KeyError as error:
+            raise ValueError(f"monster line {line_no}: unknown flag {error.args[0]}") from None
+        hp, kill_exp, first_level, last_level, hit_chance, drop_percent, name_id = (
+            int(value, 0) for value in fields[3:]
+        )
+        damage_n1, damage_s1, damage_n2, damage_s2 = parse_damage(damage, line_no)
+        byte_values = (hp, first_level, last_level, hit_chance, drop_percent,
+                       damage_n1, damage_s1, damage_n2, damage_s2)
+        if any(value < 0 or value > 255 for value in byte_values):
+            raise ValueError(f"monster line {line_no}: byte value out of range")
+        if not 0 <= kill_exp <= 65535 or not 0 <= name_id <= 65535:
+            raise ValueError(f"monster line {line_no}: word value out of range")
+        m_char = macro_value(display_values, "DC_A", letter, line_no) + \
+            ord(letter) - ord("A")
+        records.append(struct.pack(
+            "<hhhHHBBbHbbBBhBIhhBBBBhH",
+            0, 0, 0,                 # quantity, row, col
+            0, drop_percent,         # what_is, which_kind/drop_percent
+            0, 0, 0,                 # trail_char, picked_up, ichar
+            0,                       # in_use_flags
+            0, 0,                    # hit_enchant, d_enchant
+            last_level, first_level, # is_cursed/last, is_protected/first
+            hp, m_char, flags, kill_exp, hit_chance,
+            damage_n1, damage_s1, damage_n2, damage_s2,
+            name_id, 0))             # next_object
+    if len(records) != 26:
+        raise ValueError(f"monster table has {len(records)} records (expected 26)")
+    return bytearray(b"".join(records))
+
+
+def make_external_image(messages, monsters, load_address, monster_address):
+    image = make_message_image(messages)
+    monster_offset = monster_address - load_address
+    if monster_offset < len(image):
+        raise ValueError("message table overlaps monster table")
+    image.extend(bytes(monster_offset - len(image)))
+    image.extend(monsters)
     return image
 
 
@@ -189,38 +272,55 @@ def make_mzt_header(filename, data_size, load_address, exec_address):
     return header
 
 
-def write_mzt(path, messages, filename, load_address, exec_address):
-    image = make_message_image(messages)
-    header = make_mzt_header(filename, len(image), load_address, exec_address)
-    path.write_bytes(header + image)
-    return len(image)
+def write_compressed_mzt(path, image, filename, load_address, exec_address, zx0):
+    with tempfile.TemporaryDirectory(dir=path.parent) as temp_dir:
+        raw_path = Path(temp_dir) / "rogue_data.bin"
+        compressed_path = Path(temp_dir) / "rogue_data.zx0"
+        raw_path.write_bytes(image)
+        subprocess.run((str(zx0.resolve()), "-f", str(raw_path),
+                        str(compressed_path)), check=True)
+        compressed = compressed_path.read_bytes()
+    header = make_mzt_header(filename, len(compressed), load_address, exec_address)
+    path.write_bytes(header + compressed)
+    return len(image), len(compressed)
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--display", type=Path, required=True)
     parser.add_argument("--input", type=Path, required=True)
+    parser.add_argument("--monster", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--zx0", type=Path, required=True)
     parser.add_argument("--ids", required=True,
                         help="comma-separated message IDs")
     parser.add_argument("--mzt-name", default="MESG",
                         help="filename stored in the MZT header")
     parser.add_argument("--load-address", type=lambda value: int(value, 0),
-                        default=0xd000)
+                        default=0xc000)
     parser.add_argument("--exec-address", type=lambda value: int(value, 0),
+                        default=0xc000)
+    parser.add_argument("--data-address", type=lambda value: int(value, 0),
                         default=0xd000)
+    parser.add_argument("--monster-address", type=lambda value: int(value, 0),
+                        default=0xe800)
     args = parser.parse_args()
     selected = {int(value) for value in args.ids.split(",")}
     values = read_defines(args.display)
     source = parse_messages(args.input, selected)
     encoded = [(msg_id, encode_message(text, values, line_no))
                for msg_id, text, line_no in source]
-    image_size = write_mzt(args.output, encoded, args.mzt_name,
-                           args.load_address, args.exec_address)
+    monsters = parse_monsters(args.monster, values)
+    image = make_external_image(encoded, monsters, args.data_address,
+                                args.monster_address)
+    image_size, compressed_size = write_compressed_mzt(
+        args.output, image, args.mzt_name, args.load_address,
+        args.exec_address, args.zx0)
     for msg_id, data in encoded:
         print(f"message {msg_id}: {len(data)} bytes")
-    print(f"MZT: {args.output} data={image_size} bytes "
-          f"load=0x{args.load_address:04x} exec=0x{args.exec_address:04x}")
+    print(f"MZT: {args.output} compressed={compressed_size} bytes "
+          f"expanded={image_size} bytes load=0x{args.load_address:04x} "
+          f"exec=0x{args.exec_address:04x}")
 
 
 if __name__ == "__main__":

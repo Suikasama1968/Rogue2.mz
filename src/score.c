@@ -25,7 +25,8 @@ static short mz_display_length(const u8 *text)
     return length;
 }
 
-void killed_by(object *monster, short other)
+void
+killed_by(object *monster, short other)
 {
 #if defined(DEBUG)
     (void)monster;
@@ -45,14 +46,23 @@ void killed_by(object *monster, short other)
 
     game_over = 1;
     rogue.hp_current = 0;
-    rogue.gold = rogue.gold * 9L / 10L;
     clear();
-    for (id = 500; id <= 513; ++id) {
-        (void)get_message(id, text, sizeof(text));
-        mvaddstr((u8)(id - 497), 0, text);
+
+    /* メッセージファイル化 for MZ */
+    for ( i = 0; i < 14; i++) {
+        (void)get_message(500 + i, text, sizeof(text));
+        mvaddstr((u8)(i + 3), 0, text);
     }
+
     length = 0;
-    if (monster) {
+
+    if (other != QUIT) {
+        rogue.gold = ((rogue.gold * 9L) / 10L);
+    }   
+
+    if (other){
+        length = get_message((short)(167 + other), reason, sizeof(reason));
+    }else{
         length = get_message(monster->m_name_id, reason, sizeof(reason));
         suffix_length = get_message(176, reason + length,
                                     (short)(sizeof(reason) - length));
@@ -63,20 +73,21 @@ void killed_by(object *monster, short other)
             --suffix_length;
         }
         length += suffix_length;
-    } else {
-        length = get_message((short)(other == STARVATION ? 180 : 170),
-                             reason, sizeof(reason));
     }
+
     length = mz_display_length(reason);
     mvaddstr(12, (u8)((40 - length) / 2), reason);
+
     values[0] = cur_level;
     values[1] = rogue.gold;
     values[2] = rogue.exp_points;
     mz_sprintf(stats, "Level:%d Gold:%ld Exp:%ld", values);
     length = mz_display_length(stats);
     mvaddstr(18, (u8)((40 - length) / 2), stats);
+
     (void)get_message(517, text, sizeof(text));
     mvaddstr(20, 0, text);
+
     rogue.row = 0;
     rogue.col = 0;
     refresh();
@@ -84,25 +95,29 @@ void killed_by(object *monster, short other)
 #endif
 }
 
-void win(void)
+void
+win(void)
 {
-    u8 text[40];
+    u8 text[41];
     short length;
     short id;
 
     game_over = 1;
     clear();
-    (void)get_message(519, text, sizeof(text));
-    length = mz_display_length(text);
-    mvaddstr(3, (u8)((40 - length) / 2), text);
+
+    /* メッセージファイル化 for MZ */
+    for (id = 520; id <= 524; ++id) {
+        (void)get_message(id, text, sizeof(text));
+        mvaddstr((u8)(id - 517), 0, text);
+    }
+
     for (id = 182; id <= 185; ++id) {
         (void)get_message(id, text, sizeof(text));
-        length = mz_display_length(text);
-        mvaddstr((u8)(id - 176), (u8)((40 - length) / 2), text);
+        mvaddstr((u8)(id - 172), 3, text);
     }
-    (void)get_message(520, text, sizeof(text));
-    length = mz_display_length(text);
-    mvaddstr(12, (u8)((40 - length) / 2), text);
+
+    (void)get_message(517, text, sizeof(text));
+    mvaddstr(20, 0, text);
     rogue.row = 0;
     rogue.col = 0;
     refresh();

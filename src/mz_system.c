@@ -10,6 +10,32 @@
 #include "mz_display.h"
 
 /*
+    Reset
+*/
+void RESET() __naked
+{
+#asm
+    jp 0xe800
+#endasm
+}
+/*
+    8bit乱数
+*/
+u8 fast_rand8(void) __naked
+{
+#asm
+    ld  a, r                ; Rレジズタ
+    rlca                    ; ビット循環
+
+    ld  hl, RAND8_STATE
+    xor (hl)
+
+    ld  (hl), a
+    ld  l, a                ; return value
+    ret
+#endasm
+}
+/*
     バンクをVRAM,メモリマップドI/Oに切り替える
 */
 void BANK_VRAM() __naked
@@ -205,5 +231,94 @@ LOOP_STATUS_ATTR:
 call _BANK_DRAM_H
 
 ret
+#endasm
+}
+/*
+    ZX0 ("Standard") decoder for Z80 / z88dk
+    使用方向:
+    dzx0_decompress_fastcall(dst, src);
+        dst: 展開先, src: 圧縮データ先頭
+*/
+void dzx0_decompress_fastcall(void *dst, const void *src) __naked
+{
+#asm
+    ld      hl, 2
+    add     hl, sp               ; 引数の位置へ移動
+
+    ld      e, (hl)
+    inc     hl
+    ld      d, (hl)
+    inc     hl
+    push    de                   ; srcアドレスをpush
+
+    ld      e, (hl)
+    inc     hl
+    ld      d, (hl)
+    pop     hl                   ; hl = srcアドレス
+
+; -----------------------------------------------------------------------------
+; ZX0 decoder by Einar Saukas & Urusergi - "Standard" version
+; Parameters on entry:
+;   HL: source address (compressed data)
+;   DE: destination address (decompressed)
+; -----------------------------------------------------------------------------
+dzx0_standard:
+    ld      bc, $ffff
+    push    bc
+    inc     bc
+    ld      a, $80
+
+dzx0s_literals:
+    call    dzx0s_elias
+    ldir
+    add     a, a
+    jr      c, dzx0s_new_offset
+    call    dzx0s_elias
+
+dzx0s_copy:
+    ex      (sp), hl
+    push    hl
+    add     hl, de
+    ldir
+    pop     hl
+    ex      (sp), hl
+    add     a, a
+    jr      nc, dzx0s_literals
+
+dzx0s_new_offset:
+    pop     bc
+    ld      c, $fe
+    call    dzx0s_elias_loop
+    inc     c
+    ret     z
+    ld      b, c
+    ld      c, (hl)
+    inc     hl
+    rr      b
+    rr      c
+    push    bc
+    ld      bc, 1
+    call    nc, dzx0s_elias_backtrack
+    inc     bc
+    jr      dzx0s_copy
+
+dzx0s_elias:
+    inc     c
+
+dzx0s_elias_loop:
+    add     a, a
+    jr      nz, dzx0s_elias_skip
+    ld      a, (hl)
+    inc     hl
+    rla
+
+dzx0s_elias_skip:
+    ret     c
+
+dzx0s_elias_backtrack:
+    add     a, a
+    rl      c
+    rl      b
+    jr      dzx0s_elias_loop
 #endasm
 }

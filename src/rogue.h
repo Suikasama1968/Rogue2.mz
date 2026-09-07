@@ -170,6 +170,11 @@ struct obj {
 
 typedef struct obj object;
 
+/* Monster meanings for fields shared with object, as in the original. */
+#define first_level  is_protected
+#define last_level   is_cursed
+#define drop_percent which_kind
+
 #define INIT_HP       12
 
 struct fight {

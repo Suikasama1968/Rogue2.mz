@@ -36,6 +36,7 @@ extern "C" {
 // バンク切替状態保存先
 #define BANK_MODE       (SYSTEM_WORK + 0x0020)
 #define BANK_NUM        (SYSTEM_WORK + 0x0021)
+#define RAND8_STATE     (SYSTEM_WORK + 0x0022)
 
 // デバッグ用
 #define FUNC_TRACE      (SYSTEM_WORK + 0x0030)
@@ -102,6 +103,9 @@ extern "C" {
 #define MESG_ADDR       0xd000
 #define MESG_SIZE       0x3000
 
+// モンスターテーブル
+#define MONSTER_TABLE_ADDR 0xe800
+
 // PCG関連
 #define PCG_RAM         0xd000
 #define BANK_RED        0x02
@@ -113,6 +117,8 @@ extern "C" {
 #define PCG_3_ADDR      0xe000
 #define PCG_4_ADDR      0xe800
 
+extern void RESET(void);
+extern u8 fast_rand8(void);
 extern void KEY_Scan(void);
 extern void BANK_VRAM(void);
 extern void BANK_DRAM_L(void);

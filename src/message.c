@@ -23,24 +23,22 @@ extern short add_strength;
 static const u8 *find_message(short msg_id, u8 *length)
 {
     const u8 *base = (const u8 *)MESG_ADDR;
-    const u8 *entry = base + MESSAGE_HEADER_SIZE;
-    unsigned short data_offset;
+    const u8 *entry = base;
     unsigned short offset;
-    short id;
-    u8 i;
+    unsigned short id;
 
-    data_offset = (unsigned short)base[6] | ((unsigned short)base[7] << 8);
-    for (i = 0; i < base[4]; ++i, entry += MESSAGE_ENTRY_SIZE) {
-        id = (short)((unsigned short)entry[0] |
-                     ((unsigned short)entry[1] << 8));
-        if (id == msg_id) {
+    for (;;) {
+        id = (unsigned short)entry[0] |
+             ((unsigned short)entry[1] << 8);
+        if (id == MESSAGE_END_ID) return 0;
+        if (id == (unsigned short)msg_id) {
             offset = (unsigned short)entry[2] |
                      ((unsigned short)entry[3] << 8);
             *length = entry[4];
-            return base + data_offset + offset;
+            return base + offset;
         }
+        entry += MESSAGE_ENTRY_SIZE;
     }
-    return 0;
 }
 
 void print_stats(int stat_mask)

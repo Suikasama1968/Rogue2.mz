@@ -2,13 +2,8 @@
 #define __MESSAGE_H__
 
 #define MESSAGE_FORMAT_STRING 0xfe
-#define MESSAGE_HEADER_SIZE   8
 #define MESSAGE_ENTRY_SIZE    5
-#define MESSAGE_MAGIC_0       'M'
-#define MESSAGE_MAGIC_1       'Z'
-#define MESSAGE_MAGIC_2       'M'
-#define MESSAGE_MAGIC_3       'G'
-#define MESSAGE_VERSION       1
+#define MESSAGE_END_ID        0xffff
 
 extern void message(char *msg, boolean intrpt);
 extern void remessage(void);

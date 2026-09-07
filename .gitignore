@@ -6,6 +6,7 @@
 /src/*.sym
 /src/ROGUE
 /src/ROGUE_OBJ
+/src/ZX0-main/src/zx0
 
 # Original build products
 /rogue

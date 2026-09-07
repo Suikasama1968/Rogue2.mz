@@ -29,39 +29,8 @@ typedef char monster_used_size_check[
 
 object level_monsters;
 
-typedef struct mz_monster_type {
-    unsigned long flags;
-    u8 letter;
-    u8 first_level;
-    u8 last_level;
-    u8 hp;
-    u8 hit_chance;
-    u8 damage_n1;
-    u8 damage_s1;
-    u8 damage_n2;
-    u8 damage_s2;
-    unsigned short kill_exp;
-    short name_id;
-} mz_monster_type;
-
-/* 本家mon_tabから、現在の階層で登場する種類を抜粋したもの。 */
-static const mz_monster_type mz_mon_tab[] = {
-    { ASLEEP | WANDERS | FLITS, 'B', 1, 8, 10, 60, 1, 3, 0, 0, 2, 308 },
-    { ASLEEP | WAKENS, 'E', 1, 7, 11, 65, 1, 3, 0, 0, 2, 311 },
-    { ASLEEP | WAKENS | WANDERS, 'H', 1, 10, 15, 67, 1, 3, 1, 2, 3, 314 },
-    { ASLEEP | WAKENS | WANDERS | FLIES, 'K', 1, 6, 10, 60, 1, 4, 0, 0, 2, 317 },
-    { ASLEEP | WAKENS | WANDERS | SEEKS_GOLD, 'O', 4, 13, 25, 70, 1, 6, 0, 0, 5, 321 },
-    { ASLEEP | WAKENS | WANDERS | STINGS, 'R', 3, 12, 19, 70, 2, 5, 0, 0, 10, 324 },
-    { ASLEEP | WAKENS | WANDERS, 'S', 1, 9, 8, 50, 1, 3, 0, 0, 2, 325 },
-    { ASLEEP | WAKENS | WANDERS, 'Z', 5, 14, 21, 69, 1, 7, 0, 0, 8, 332 },
-    { ASLEEP | WANDERS, 'C', 7, 16, 32, 85, 3, 3, 2, 5, 15, 309 },
-    { ASLEEP | WAKENS | WANDERS, 'Q', 8, 17, 30, 78, 3, 5, 0, 0, 20, 323 },
-    { ASLEEP | WAKENS | WANDERS, 'T', 13, 22, 75, 75, 4, 6, 1, 4, 125, 326 },
-    { ASLEEP | WAKENS | WANDERS, 'U', 17, 26, 90, 85, 4, 10, 0, 0, 200, 327 },
-    { ASLEEP | WAKENS | FLAMES, 'D', 21, 126, 145, 100, 4, 6, 4, 9, 5000, 310 }
-};
-
-#define MZ_MONSTER_TYPES (sizeof(mz_mon_tab) / sizeof(mz_mon_tab[0]))
+#define mon_tab ((const object *)MONSTER_TABLE_ADDR)
+typedef char monster_object_size_check[sizeof(object) == 38 ? 1 : -1];
 
 static int place_monster(short row, short col, boolean wandering);
 
@@ -105,6 +74,10 @@ mv_mons(void)
 
     monster = level_monsters.next_object;
     while (monster) {
+        if (monster->m_flags & FREEZING_ROGUE) {
+            monster = monster->next_object;
+            continue;
+        }
         if (monster->m_flags & ASLEEP) {
             if (monster->m_flags & NAPPING) {
                 if (monster->d_enchant > 0) --monster->d_enchant;
@@ -213,24 +186,20 @@ static int place_monster(short row, short col, boolean wandering)
 {
     u8 i, mn;
     object *monster;
-    const mz_monster_type *type;
+    const object *type;
 
     for (i = 0; i < MAX_MONSTERS && monster_used[i]; ++i) {}
     if (i == MAX_MONSTERS) return 0;
     do {
-        mn = (u8)get_rand(0, MZ_MONSTER_TYPES - 1);
-        type = &mz_mon_tab[mn];
+        mn = (u8)get_rand(0, MONSTERS - 1);
+        type = &mon_tab[mn];
     } while (cur_level < type->first_level || cur_level > type->last_level ||
-             (wandering && !(type->flags & (WAKENS | WANDERS))));
+             (wandering && !(type->m_flags & (WAKENS | WANDERS))));
     monster = &monster_pool[i];
     monster_used[i] = 1;
-    monster->row = row; monster->col = col; monster->m_hp = type->hp;
-    monster->m_char = (u8)(DC_A + type->letter - 'A');
-    monster->m_flags = type->flags; monster->kill_exp = type->kill_exp;
-    monster->m_hit_chance = type->hit_chance;
-    monster->m_damage_n1 = type->damage_n1; monster->m_damage_s1 = type->damage_s1;
-    monster->m_damage_n2 = type->damage_n2; monster->m_damage_s2 = type->damage_s2;
-    monster->m_name_id = type->name_id;
+    *monster = *type;
+    monster->row = row;
+    monster->col = col;
     monster->next_object = level_monsters.next_object;
     level_monsters.next_object = monster;
     return 1;
@@ -270,7 +239,6 @@ void remove_monster(object *monster)
         }
     }
 }
-
 
 void party_monsters(int rn, int n)
 {
