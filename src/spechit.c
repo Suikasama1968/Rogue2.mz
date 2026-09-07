@@ -39,13 +39,13 @@ rust(object *monster)
         rogue.armor->which_kind == LEATHER) return;
     if (rogue.armor->is_protected) {
         if (!(monster->m_flags & RUST_VANISHED)) {
-            message_id_mz(201, 0);
+            message_id(201, 0);
             monster->m_flags |= RUST_VANISHED;
         }
     } else {
         --rogue.armor->d_enchant;
         --rogue.armor_class;
-        message_id_mz(202, 0);
+        message_id(202, 0);
         print_stats(STAT_ARMOR);
     }
 }
@@ -64,14 +64,14 @@ freeze(object *monster)
     freeze_percent -= rogue.hp_max / 3;
     if (freeze_percent <= 10) return;
     monster->m_flags |= FREEZING_ROGUE;
-    message_id_mz(203, 0);
+    message_id(203, 0);
     n = (short)get_rand(4, 8);
     for (i = 0; i < n && !game_over; ++i) mv_mons();
     if (!game_over && rand_percent(freeze_percent)) {
         for (i = 0; i < 50 && !game_over; ++i) mv_mons();
         if (!game_over) killed_by(0, HYPOTHERMIA);
     }
-    if (!game_over) message_id_mz(66, 0);
+    if (!game_over) message_id(66, 0);
     monster->m_flags &= ~FREEZING_ROGUE;
 }
 
@@ -86,7 +86,7 @@ sting(object *monster)
     if (rogue.exp > 8) sting_chance -= (short)(6 * (rogue.exp - 8));
     if (rand_percent(sting_chance)) {
         get_message(monster->m_name_id, name, sizeof(name));
-        message_id_mz(207, name);
+        message_id(207, name);
         --rogue.str_current;
         print_stats(STAT_STRENGTH);
     }
@@ -101,7 +101,7 @@ steal_gold(object *monster)
     amount = get_rand(cur_level * 10, cur_level * 30);
     if (amount > rogue.gold) amount = rogue.gold;
     rogue.gold -= amount;
-    message_id_mz(204, 0);
+    message_id(204, 0);
     print_stats(STAT_GOLD);
     disappear(monster);
 }
@@ -130,7 +130,7 @@ steal_item(object *monster)
         length = 0;
         while (desc[length]) ++length;
         get_message(205, desc + length, ROGUE_COLUMNS - length);
-        message_mz(desc, 0);
+        message((char *)desc, 0);
         chosen->quantity = (chosen->what_is != WEAPON) ? quantity : 1;
         vanish(chosen, 0, &rogue.pack);
     }

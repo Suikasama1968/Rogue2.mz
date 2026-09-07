@@ -41,7 +41,7 @@ main(int argc, char *argv[])
         put_player(party_room);
         print_stats(STAT_ALL);
         if (first) {
-            message_id_mz(10, 0);
+            message_id(10, 0);
         }
         first = 0;
         play_level();

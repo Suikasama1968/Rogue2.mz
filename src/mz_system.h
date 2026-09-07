@@ -36,7 +36,6 @@ extern "C" {
 // バンク切替状態保存先
 #define BANK_MODE       (SYSTEM_WORK + 0x0020)
 #define BANK_NUM        (SYSTEM_WORK + 0x0021)
-#define RAND8_STATE     (SYSTEM_WORK + 0x0022)
 
 // デバッグ用
 #define FUNC_TRACE      (SYSTEM_WORK + 0x0030)
@@ -118,6 +117,7 @@ extern "C" {
 #define PCG_4_ADDR      0xe800
 
 extern void RESET(void);
+extern void BELL(void);
 extern u8 fast_rand8(void);
 extern void KEY_Scan(void);
 extern void BANK_VRAM(void);

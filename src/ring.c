@@ -27,27 +27,27 @@ put_on_ring(void)
     object *ring;
 
     if (r_rings == 2) {
-        message_id_mz(160, 0);
+        message_id(160, 0);
         return;
     }
     ch = (short)pack_letter(0, RING);
     if (ch == CANCEL) return;
     if (!(ring = get_letter_object(ch))) {
-        message_id_mz(162, 0);
+        message_id(162, 0);
         return;
     }
     if (ring->what_is != RING) {
-        message_id_mz(163, 0);
+        message_id(163, 0);
         return;
     }
     if (ring->in_use_flags & (ON_LEFT_HAND | ON_RIGHT_HAND)) {
-        message_id_mz(164, 0);
+        message_id(164, 0);
         return;
     }
     if (r_rings == 1) {
         ch = rogue.left_ring ? 'r' : 'l';
     } else {
-        message_id_mz(158, 0);
+        message_id(158, 0);
         do {
             ch = (short)rgetchar();
         } while (ch != CANCEL && ch != 'l' && ch != 'r');
@@ -56,12 +56,12 @@ put_on_ring(void)
     if (ch != 'l' && ch != 'r') return;
     if ((ch == 'l' && rogue.left_ring) ||
         (ch == 'r' && rogue.right_ring)) {
-        message_id_mz(165, 0);
+        message_id(165, 0);
         return;
     }
     do_put_on(ring, (boolean)(ch == 'l'));
     ring_stats(1);
-    message_id_mz(403, 0);
+    message_id(403, 0);
     (void)reg_move();
 }
 
@@ -90,7 +90,7 @@ remove_ring(void)
     if (rogue.left_ring && !rogue.right_ring) ring = rogue.left_ring;
     else if (!rogue.left_ring && rogue.right_ring) ring = rogue.right_ring;
     else {
-        message_id_mz(158, 0);
+        message_id(158, 0);
         do {
             ch = (short)rgetchar();
         } while (ch != CANCEL && ch != 'l' && ch != 'r');
@@ -99,12 +99,12 @@ remove_ring(void)
         ring = (ch == 'l') ? rogue.left_ring : rogue.right_ring;
     }
     if (!ring) {
-        message_id_mz(159, 0);
+        message_id(159, 0);
     } else if (ring->is_cursed) {
-        message_id_mz(85, 0);
+        message_id(85, 0);
     } else {
         un_put_on(ring);
-        message_id_mz(166, 0);
+        message_id(166, 0);
         (void)reg_move();
     }
 }
@@ -138,8 +138,8 @@ gr_ring(object *ring, boolean assign_wk)
 void
 inv_rings(void)
 {
-    if (!r_rings) message_id_mz(167, 0);
-    else message_id_mz(403, 0);
+    if (!r_rings) message_id(167, 0);
+    else message_id(403, 0);
 }
 
 void

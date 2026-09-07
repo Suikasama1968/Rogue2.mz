@@ -438,18 +438,18 @@ void put_player(short nr)
 int drop_check(void)
 {
     if (rogue.row == stairs_row && rogue.col == stairs_col) return 1;
-    message_id_mz(49, 0);
+    message_id(49, 0);
     return 0;
 }
 
 int check_up(void)
 {
     if (rogue.row != stairs_row || rogue.col != stairs_col) {
-        message_id_mz(50, 0);
+        message_id(50, 0);
         return 0;
     }
     if (!has_amulet()) {
-        message_id_mz(51, 0);
+        message_id(51, 0);
         return 0;
     }
     if (cur_level == 1) {
@@ -481,7 +481,7 @@ add_exp(int e, boolean promotion)
         }
         value = rogue.exp;
         mz_sprintf(mz_number, "%d", &value);
-        message_id_mz(53, mz_number);
+        message_id(53, mz_number);
     }
 }
 

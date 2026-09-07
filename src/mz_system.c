@@ -10,6 +10,19 @@
 #include "mz_display.h"
 
 /*
+    Bellを鳴らす
+*/
+void BELL(void) __naked
+{
+#asm
+    call _BANK_ROM
+    call $003e
+    call _BANK_DRAM_L
+    call _BANK_DRAM_H
+    ret
+#endasm  
+}
+/*
     Reset
 */
 void RESET() __naked
@@ -19,19 +32,13 @@ void RESET() __naked
 #endasm
 }
 /*
-    8bit乱数
+    乱数の初期値としてZ80のRレジスタを取得する
 */
 u8 fast_rand8(void) __naked
 {
 #asm
-    ld  a, r                ; Rレジズタ
-    rlca                    ; ビット循環
-
-    ld  hl, RAND8_STATE
-    xor (hl)
-
-    ld  (hl), a
-    ld  l, a                ; return value
+    ld  a, r
+    ld  l, a
     ret
 #endasm
 }

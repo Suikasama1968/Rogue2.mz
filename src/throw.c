@@ -12,6 +12,7 @@
 
 #include "rogue.h"
 #include "throw.h"
+#include "display.h"
 #include "hit.h"
 #include "message.h"
 #include "monster.h"
@@ -40,11 +41,11 @@ throw(void)
     check_message();
 
     if (!(weapon = get_letter_object(wch))) {
-        message_id_mz(211, 0);
+        message_id(211, 0);
         return;
     }
     if ((weapon->in_use_flags & BEING_WIELDED) && weapon->is_cursed) {
-        message_id_mz(85, 0);
+        message_id(85, 0);
         return;
     }
     row = rogue.row;
@@ -83,10 +84,10 @@ throw_at_monster(object *monster, object *weapon)
         hit_chance += hit_chance / 3;
     }
     if (!rand_percent(hit_chance)) {
-        message_id_mz(213, 0);
+        message_id(213, 0);
         return 0;
     }
-    message_id_mz(214, 0);
+    message_id(214, 0);
     (void)mon_damage(monster, damage);
     return 1;
 }
@@ -110,10 +111,12 @@ get_thrown_at_monster(object *obj, short dir, short *row, short *col)
         if (monster_at(*row, *col)) return monster_at(*row, *col);
         if (DUNGEON_ATTR(*row, *col) != ATTR_HIDDEN) {
             tile = DUNGEON(*row, *col);
+            attrset(COLOR_PAIR(PAIR_OBJECT));
             mvaddch((u8)*row, (u8)*col, DC_R_BLACKET);
-            move((u8)rogue.row, (u8)rogue.col);
-            refresh();
+            refresh_dungeon();
             DUNGEON(*row, *col) = tile;
+            colorize_dungeon(*row, *col);
+            attrset(COLOR_PAIR(PAIR_NORMAL));
         }
         old_row = *row;
         old_col = *col;
@@ -148,7 +151,7 @@ flop_weapon(object *weapon, short row, short col)
         place_at(new_weapon, r, c);
         return;
     }
-    message_id_mz(215, 0);
+    message_id(215, 0);
 }
 
 void

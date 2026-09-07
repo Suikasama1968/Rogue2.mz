@@ -115,7 +115,7 @@ byebye(int sig)
 {
     (void)sig;
 
-    message_id_mz(12, 0);
+    message_id(12, 0);
     refresh();
     md_exit(0);
 }

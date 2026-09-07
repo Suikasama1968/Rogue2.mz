@@ -30,6 +30,7 @@ static short foods;
 short party_counter;
 object level_objects;
 unsigned short identified_potions;
+
 fighter rogue = {
     0,                          /* gold */
     INIT_HP,                    /* Hp current */
@@ -48,17 +49,21 @@ fighter rogue = {
 void
 put_objects(void)
 {
-    int i;
-    int n = coin_toss() ? get_rand(2, 4) : get_rand(3, 5);
+    short i, n; 
     object *obj;
 
+    n = coin_toss() ? get_rand(2, 4) : get_rand(3, 5);
+ 
     clear_level_objects();
     if (cur_level == party_counter) {
         make_party();
         party_counter = next_party();
     }
+
     if (cur_level >= AMULET_LEVEL && !has_amulet()) put_amulet();
+    
     while (n < 8 && rand_percent(33)) ++n;
+    
     for (i = 0; i < n; i++) {
         obj = gr_object();
         if (obj) rand_place(obj);
@@ -102,6 +107,13 @@ void plant_gold(short row, short col, boolean is_maze)
     place_at(obj, row, col);
 }
 
+void
+place_at(object *obj, int row, int col)
+{
+    obj->row = (short)row;
+    obj->col = (short)col;
+    add_to_pack(obj, &level_objects, 0);
+}
 object *
 object_at(object *pack, short row, short col)
 {
@@ -126,62 +138,6 @@ get_letter_object(int ch)
         obj = obj->next_object;
     }
     return obj;
-}
-
-object *alloc_object(void)
-{
-    int i;
-
-    for (i = 0; i < MAX_OBJECTS; ++i) {
-        if (!object_used[i]) {
-            object_used[i] = 1;
-            object_pool[i].next_object = 0;
-            object_pool[i].quantity = 1;
-            object_pool[i].picked_up = 0;
-            object_pool[i].ichar = 0;
-            object_pool[i].in_use_flags = 0;
-            object_pool[i].hit_enchant = 0;
-            object_pool[i].d_enchant = 0;
-            object_pool[i].is_cursed = 0;
-            object_pool[i].is_protected = 0;
-            return &object_pool[i];
-        }
-    }
-    return 0;
-}
-
-void free_object(object *obj)
-{
-    int i;
-
-    for (i = 0; i < MAX_OBJECTS; ++i) {
-        if (obj == &object_pool[i]) {
-            object_used[i] = 0;
-            object_pool[i].next_object = 0;
-            return;
-        }
-    }
-}
-
-void clear_level_objects(void)
-{
-    object *obj = level_objects.next_object;
-    object *next;
-
-    while (obj) {
-        next = obj->next_object;
-        free_object(obj);
-        obj = next;
-    }
-    level_objects.next_object = 0;
-}
-
-
-void place_at(object *obj, int row, int col)
-{
-    obj->row = (short)row;
-    obj->col = (short)col;
-    add_to_pack(obj, &level_objects, 0);
 }
 
 object *
@@ -213,28 +169,41 @@ gr_object(void)
     return obj;
 }
 
-void get_food(object *obj, boolean force_ration)
+void clear_level_objects(void)
 {
-    obj->what_is = FOOD;
-    obj->which_kind = (force_ration || rand_percent(80)) ? RATION : FRUIT;
+    object *obj = level_objects.next_object;
+    object *next;
+
+    while (obj) {
+        next = obj->next_object;
+        free_object(obj);
+        obj = next;
+    }
+    level_objects.next_object = 0;
 }
+
 
 void gr_potion(object *obj)
 {
-    static const u8 per[] = { 10, 20, 30, 40, 50, 55 };
-    short percent = (short)get_rand(1, 55);
+    static const u8 per[] = { 10, 20, 30, 40, 50, 55, 65, 75 };
+    static const u8 kinds[] = {
+        INCREASE_STRENGTH, RESTORE_STRENGTH, HEALING, EXTRA_HEALING,
+        POISON, RAISE_LEVEL, BLINDNESS, CONFUSION
+    };
+    short percent = (short)get_rand(1, 75);
     short i;
 
     obj->what_is = POTION;
     for (i = 0; i < (short)sizeof(per); ++i) {
         if (percent <= per[i]) {
-            obj->which_kind = (unsigned short)i;
+            obj->which_kind = kinds[i];
             return;
         }
     }
 }
 
-void gr_scroll(object *obj)
+void
+gr_scroll(object *obj)
 {
     static const u8 per[SCROLS] = {
         5, 11, 16, 21, 36, 44, 51, 56, 65, 74, 80, 85
@@ -321,6 +290,18 @@ gr_wand(object *obj)
     }
 }
 
+void
+get_food(object *obj, boolean force_ration)
+{
+    obj->what_is = FOOD;
+
+    if (force_ration || rand_percent(80)) {
+	    obj->which_kind = RATION;
+    } else {
+	    obj->which_kind = FRUIT;
+    }
+}
+
 unsigned short gr_what_is(void)
 {
     short percent = (short)get_rand(1, 91);
@@ -334,7 +315,6 @@ unsigned short gr_what_is(void)
     return RING;
 }
 
-
 void rand_place(object *obj)
 {
     short row;
@@ -345,7 +325,6 @@ void rand_place(object *obj)
     } while (object_at(&level_objects, row, col));
     place_at(obj, row, col);
 }
-
 
 void put_amulet(void)
 {
@@ -358,7 +337,6 @@ void put_amulet(void)
     rand_place(obj);
 }
 
-
 int
 next_party(void)
 {
@@ -369,12 +347,6 @@ next_party(void)
         n++;
     }
     return (get_rand((n + 1), (n + PARTY_TIME)));
-}
-
-void make_party(void)
-{
-    party_room = (short)gr_room();
-    party_objects(party_room);
 }
 
 void put_stairs(void)
@@ -389,3 +361,45 @@ void put_stairs(void)
     stairs_col = (u8)col;
     DUNGEON(row, col) = TILE_STAIRS;
 }
+
+object *alloc_object(void)
+{
+    int i;
+
+    for (i = 0; i < MAX_OBJECTS; ++i) {
+        if (!object_used[i]) {
+            object_used[i] = 1;
+            object_pool[i].next_object = 0;
+            object_pool[i].quantity = 1;
+            object_pool[i].picked_up = 0;
+            object_pool[i].ichar = 0;
+            object_pool[i].in_use_flags = 0;
+            object_pool[i].hit_enchant = 0;
+            object_pool[i].d_enchant = 0;
+            object_pool[i].is_cursed = 0;
+            object_pool[i].is_protected = 0;
+            return &object_pool[i];
+        }
+    }
+    return 0;
+}
+
+void free_object(object *obj)
+{
+    int i;
+
+    for (i = 0; i < MAX_OBJECTS; ++i) {
+        if (obj == &object_pool[i]) {
+            object_used[i] = 0;
+            object_pool[i].next_object = 0;
+            return;
+        }
+    }
+}
+
+void make_party(void)
+{
+    party_room = (short)gr_room();
+    party_objects(party_room);
+}
+

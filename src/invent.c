@@ -40,7 +40,7 @@ void inventory(object *pack, unsigned short mask)
 
     while (obj && !(obj->what_is & mask)) obj = obj->next_object;
     if (!obj) {
-        message_id_mz(26, 0);
+        message_id(26, 0);
         return;
     }
     col = inventory_col();
@@ -177,7 +177,7 @@ void single_inv(short ichar)
 
     if (!(obj = get_letter_object(ichar))) return;
     get_desc(obj, desc, 1);
-    message_mz((const u8 *)desc, 0);
+    message((char *)desc, 0);
 }
 
 /* MZ-1500固有の表示・文字列処理。 */

@@ -34,15 +34,15 @@ zapp(void)
     check_message();
 
     if (!(wand = get_letter_object(wch))) {
-        message_id_mz(279, 0);
+        message_id(279, 0);
         return;
     }
     if (wand->what_is != WAND) {
-        message_id_mz(280, 0);
+        message_id(280, 0);
         return;
     }
     if (wand->hit_enchant <= 0) {
-        message_id_mz(281, 0);
+        message_id(281, 0);
     } else {
         --wand->hit_enchant;
         row = rogue.row;
@@ -98,7 +98,7 @@ zap_monster(object *monster, unsigned short kind)
                               SEEKS_GOLD);
         break;
     case DO_NOTHING:
-        message_id_mz(282, 0);
+        message_id(282, 0);
         break;
     }
 }

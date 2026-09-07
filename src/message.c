@@ -92,14 +92,14 @@ short get_message(short msg_id, u8 *buffer, short size)
     return length;
 }
 
-void message_mz(const u8 *msg, boolean intrpt)
+void message(char *msg, boolean intrpt)
 {
     u8 length = 0;
-    const u8 *p = msg;
+    const u8 *p = (const u8 *)msg;
 
     (void)intrpt;
     move(MESSAGE_ROW, 0);
-    addstr(msg);
+    addstr((const u8 *)msg);
     while (*p != '\0') {
         if (*p != MZ_STR_CSET_0 && *p != MZ_STR_CSET_1) ++length;
         ++p;
@@ -108,14 +108,7 @@ void message_mz(const u8 *msg, boolean intrpt)
     msg_cleared = 0;
 }
 
-void message(char *msg, boolean intrpt)
-{
-    (void)msg;
-    (void)intrpt;
-    /* TODO: compressed message table and message-line rendering. */
-}
-
-void message_id_mz(short msg_id, const u8 *text)
+void message_id(short msg_id, const u8 *text)
 {
     const u8 *src;
     u8 src_left;
@@ -134,12 +127,7 @@ void message_id_mz(short msg_id, const u8 *text)
         }
     }
     message_buffer[length] = '\0';
-    message_mz(message_buffer, 0);
-}
-
-void remessage(void)
-{
-    /* TODO: message history. */
+    message((char *)message_buffer, 0);
 }
 
 void check_message(void)
@@ -156,10 +144,11 @@ int get_direction(void)
 {
     int dir;
 
-    message_id_mz(55, 0);
-    do {
-        dir = rgetchar();
-    } while (!is_direction(dir));
+    message_id(55, 0);
+    while (!is_direction(dir = rgetchar())) {
+	    sound_bell();
+    }
+    flushinp();
     check_message();
     return dir;
 }
@@ -167,4 +156,10 @@ int get_direction(void)
 int rgetchar(void)
 {
     return getch();
+}
+
+void
+sound_bell(void)
+{
+    BELL();
 }

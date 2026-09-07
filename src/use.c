@@ -22,6 +22,9 @@
 
 extern long level_points[];
 
+short blind = 0;
+short confused = 0;
+
 void
 quaff(void)
 {
@@ -33,16 +36,16 @@ quaff(void)
         return;
     }
     if (!(obj = get_letter_object(ch))) {
-        message_id_mz(232, 0);
+        message_id(232, 0);
         return;
     }
     if (obj->what_is != POTION) {
-        message_id_mz(233, 0);
+        message_id(233, 0);
         return;
     }
     switch (obj->which_kind) {
     case INCREASE_STRENGTH:
-        message_id_mz(234, 0);
+        message_id(234, 0);
         rogue.str_current++;
         if (rogue.str_current > rogue.str_max) {
             rogue.str_max = rogue.str_current;
@@ -50,14 +53,14 @@ quaff(void)
         break;
     case RESTORE_STRENGTH:
         rogue.str_current = rogue.str_max;
-        message_id_mz(235, 0);
+        message_id(235, 0);
         break;
     case HEALING:
-        message_id_mz(236, 0);
+        message_id(236, 0);
         potion_heal(0);
         break;
     case EXTRA_HEALING:
-        message_id_mz(237, 0);
+        message_id(237, 0);
         potion_heal(1);
         break;
     case POISON:
@@ -65,11 +68,18 @@ quaff(void)
         if (rogue.str_current < 1) {
             rogue.str_current = 1;
         }
-        message_id_mz(238, 0);
+        message_id(238, 0);
         break;
     case RAISE_LEVEL:
         rogue.exp_points = level_points[rogue.exp - 1];
         add_exp(1, 1);
+        break;
+    case BLINDNESS:
+        go_blind();
+        break;
+    case CONFUSION:
+        message_id(241, 0);
+        confuse();
         break;
     }
     identified_potions |= (unsigned short)(1U << obj->which_kind);
@@ -91,58 +101,58 @@ read_scroll(void)
         return;
     }
     if (!(obj = get_letter_object(ch))) {
-        message_id_mz(246, 0);
+        message_id(246, 0);
         return;
     }
     if (obj->what_is != SCROL) {
-        message_id_mz(247, 0);
+        message_id(247, 0);
         return;
     }
     switch (obj->which_kind) {
     case SCARE_MONSTER:
-        message_id_mz(248, 0);
+        message_id(248, 0);
         break;
     case HOLD_MONSTER:
         for (monster = level_monsters.next_object; monster;
              monster = monster->next_object) monster->m_flags |= ASLEEP;
-        message_id_mz(269, 0);
+        message_id(269, 0);
         break;
     case ENCH_WEAPON:
         if (rogue.weapon) {
             if (coin_toss()) ++rogue.weapon->hit_enchant;
             else ++rogue.weapon->d_enchant;
-            message_id_mz(249, 0);
-        } else message_id_mz(250, 0);
+            message_id(249, 0);
+        } else message_id(250, 0);
         break;
     case ENCH_ARMOR:
         if (rogue.armor) {
             ++rogue.armor_class;
             ++rogue.armor->d_enchant;
-            message_id_mz(251, 0);
-        } else message_id_mz(252, 0);
+            message_id(251, 0);
+        } else message_id(252, 0);
         break;
     case IDENTIFY:
-        message_id_mz(253, 0);
+        message_id(253, 0);
         break;
     case TELEPORT:
         put_player(cur_room);
-        message_id_mz(221, 0);
+        message_id(221, 0);
         break;
     case SLEEP:
-        message_id_mz(254, 0);
+        message_id(254, 0);
         rest(get_rand(3, 6));
         break;
     case PROTECT_ARMOR:
         if (rogue.armor) {
             rogue.armor->is_protected = 1;
-            message_id_mz(255, 0);
-        } else message_id_mz(256, 0);
+            message_id(255, 0);
+        } else message_id(256, 0);
         break;
     case REMOVE_CURSE:
         for (obj = rogue.pack.next_object; obj; obj = obj->next_object) {
             obj->is_cursed = 0;
         }
-        message_id_mz(257, 0);
+        message_id(257, 0);
         break;
     case CREATE_MONSTER:
         create_monster();
@@ -150,7 +160,7 @@ read_scroll(void)
     case AGGRAVATE_MONSTER:
         for (monster = level_monsters.next_object; monster;
              monster = monster->next_object) monster->m_flags &= ~ASLEEP;
-        message_id_mz(248, 0);
+        message_id(248, 0);
         break;
     case MAGIC_MAPPING:
         for (row = MIN_ROW; row <= MAX_ROW; ++row) {
@@ -160,7 +170,7 @@ read_scroll(void)
             }
         }
         attrset(A_NORMAL);
-        message_id_mz(259, 0);
+        message_id(259, 0);
         break;
     }
     vanish(obj, (short)(obj->which_kind != SLEEP), &rogue.pack);
@@ -187,6 +197,10 @@ potion_heal(int extra)
     short add;
 
     rogue.hp_current += rogue.exp;
+
+    if (blind) unblind();
+    if (confused && extra) unconfuse();
+    else if (confused) confused = (confused / 2) + 1;
 
     ratio = rogue.hp_current * 100L / rogue.hp_max;
     
@@ -222,23 +236,60 @@ void eat(void)
         return;
     }
     if (!(obj = get_letter_object(ch))) {
-        message_id_mz(263, 0);
+        message_id(263, 0);
         return;
     }
     if (obj->what_is != FOOD) {
-        message_id_mz(264, 0);
+        message_id(264, 0);
         return;
     }
     if (obj->which_kind == FRUIT || rand_percent(60)) {
         moves = (short)get_rand(900, 1100);
-        message_id_mz((short)(obj->which_kind == RATION ? 266 : 267), 0);
+        message_id((short)(obj->which_kind == RATION ? 266 : 267), 0);
     } else {
         moves = (short)get_rand(700, 900);
-        message_id_mz(268, 0);
+        message_id(268, 0);
         add_exp(2, 1);
     }
     rogue.moves_left /= 3;
     rogue.moves_left += moves;
     hunger_str[0] = '\0';
     vanish(obj, 1, &rogue.pack);
+}
+
+void unblind(void)
+{
+    blind = 0;
+    message_id(273, 0);
+    if (cur_room == PASSAGE) light_passage(rogue.row, rogue.col);
+    else light_up_room(cur_room);
+}
+
+void go_blind(void)
+{
+    short row;
+    short col;
+
+    if (!blind) message_id(274, 0);
+    blind += (short)get_rand(500, 800);
+    if (cur_room >= 0 && !(rooms[cur_room].is_room & R_MAZE)) {
+        for (row = rooms[cur_room].top_row + 1;
+             row < rooms[cur_room].bottom_row; ++row) {
+            for (col = rooms[cur_room].left_col + 1;
+                 col < rooms[cur_room].right_col; ++col) {
+                DUNGEON_ATTR(row, col) = ATTR_HIDDEN;
+            }
+        }
+    }
+}
+
+void confuse(void)
+{
+    confused += (short)get_rand(12, 22);
+}
+
+void unconfuse(void)
+{
+    confused = 0;
+    message_id(277, 0);
 }

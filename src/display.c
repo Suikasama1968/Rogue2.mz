@@ -10,13 +10,6 @@
 #include "monster.h"
 #include "object.h"
 
-#define PAIR_NORMAL  0
-#define PAIR_TERRAIN 1
-#define PAIR_FLOOR   2
-#define PAIR_MONSTER 3
-#define PAIR_OBJECT  4
-#define PAIR_PLAYER  5
-
 /*
  * init_color_attr
  * カラー属性配列の初期化
@@ -56,11 +49,19 @@ void colorize_dungeon(short row, short col)
  */
 void display_dungeon(void)
 {
+    print_stats(STAT_ALL);
+    refresh_dungeon();
+}
+
+/*
+ * オブジェクト、モンスター、プレイヤーを重ねて実画面へ転送する
+ */
+void refresh_dungeon(void)
+{
     object *obj;
     u8 tile = DUNGEON(rogue.row, rogue.col);
     u8 attr = DUNGEON_ATTR(rogue.row, rogue.col);
 
-    print_stats(STAT_ALL);
     for (obj = level_objects.next_object; obj; obj = obj->next_object) {
         if (DUNGEON_ATTR(obj->row, obj->col) != ATTR_HIDDEN) {
             attrset(COLOR_PAIR(PAIR_OBJECT));

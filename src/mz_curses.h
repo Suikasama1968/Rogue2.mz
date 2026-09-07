@@ -52,6 +52,7 @@ extern int addnstr(const u8 *, u8);
 extern int mvaddnstr(u8, u8, const u8 *, u8);
 extern int refresh(void);
 extern int getch(void);
+extern int flushinp(void);
 extern int clrtoeol(void);
 extern int clrtobot(void);
 extern int init_pair(short, short, short);

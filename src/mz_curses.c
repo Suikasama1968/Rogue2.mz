@@ -267,6 +267,16 @@ static void wait_key_release(void)
     } while (pressed);
 }
 
+/* 
+    入力バッファの破棄
+    MZ-1500の場合入力待ちへ移る前に、現在押されている文字キーが離されるまで待つ。 
+*/
+int flushinp(void)
+{
+    wait_key_release();
+    return 0;
+}
+
 /*
   キーが押されるまで待機し、通常のASCIIコードで返す。
 */

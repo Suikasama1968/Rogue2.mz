@@ -43,7 +43,7 @@ mon_hit(object *monster, char *other, boolean flame)
     get_monster_name(monster, name, sizeof(name));
     hit_chance = monster->m_hit_chance - 2 * rogue.exp;
     if (!rand_percent(hit_chance)) {
-        message_id_mz(18, name);
+        message_id(18, name);
         return;
     }
 
@@ -55,7 +55,7 @@ mon_hit(object *monster, char *other, boolean flame)
         damage += get_rand(1, monster->m_damage_s2);
     }
     damage -= (damage * rogue.armor_class * 3) / 100;
-    message_id_mz(19, name);
+    message_id(19, name);
     if (damage > 0) rogue_damage((short)damage, monster);
     if (!game_over && (monster->m_flags & SPECIAL_HIT)) special_hit(monster);
 }
@@ -68,13 +68,13 @@ rogue_hit(object *monster, boolean force_hit)
     hit_chance = force_hit ? 100 : get_hit_chance(rogue.weapon);
 
     if (!rand_percent(hit_chance)) {
-        message_id_mz(22, 0);
+        message_id(22, 0);
         return;
     }
     damage = get_weapon_damage(rogue.weapon);
 
     if (mon_damage(monster, damage)) { /* still alive? */
-        message_id_mz(23, 0);
+        message_id(23, 0);
     }
 }
 
@@ -191,7 +191,7 @@ mon_damage(object *monster, int damage)
     monster->m_hp -= (short)damage;
     if (monster->m_hp > 0) return 1;
     get_monster_name(monster, name, sizeof(name));
-    message_id_mz(24, name);
+    message_id(24, name);
     remove_monster(monster);
     add_exp(monster->kill_exp, 1);
     return 0;

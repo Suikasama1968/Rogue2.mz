@@ -52,11 +52,11 @@ void trap_player(short row, short col)
     trap_hidden[i] = 0;
     DUNGEON(row, col) = TILE_TRAP;
     if (rand_percent(rogue.exp)) {
-        message_id_mz(228, 0);
+        message_id(228, 0);
         return;
     }
 
-    message_id_mz((short)(217 + t * 2), 0);
+    message_id((short)(217 + t * 2), 0);
     switch (t) {
     case TRAP_DOOR:
         trap_door = 1;
@@ -125,7 +125,7 @@ void add_traps(void)
 
 void id_trap(void)
 {
-    message_id_mz(229, 0);
+    message_id(229, 0);
 }
 
 void show_traps(void)
@@ -154,7 +154,7 @@ void search(short n, boolean is_auto)
                 rand_percent(17 + rogue.exp)) {
                 trap_hidden[i] = 0;
                 DUNGEON(traps[i].trap_row, traps[i].trap_col) = TILE_TRAP;
-                message_id_mz((short)(216 + traps[i].trap_type * 2), 0);
+                message_id((short)(216 + traps[i].trap_type * 2), 0);
             }
         }
         if (!is_auto) reg_move();

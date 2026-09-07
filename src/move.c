@@ -19,10 +19,13 @@
 #include "room.h"
 #include "score.h"
 #include "trap.h"
+#include "use.h"
 
 short m_moves;
 unsigned long rogue_turns;
 extern short bear_trap;
+extern short blind;
+extern short confused;
 
 int is_passable(int row, int col)
 {
@@ -62,6 +65,11 @@ int one_move_rogue(short dirch, short pickup)
     object *obj;
     char desc[ROGUE_COLUMNS];
 
+    if (confused) {
+        static const char dirs[] = "jklhyubn";
+        dirch = dirs[get_rand(0, 7)];
+    }
+
     if (bear_trap) {
         reg_move();
         return MOVE_FAILED;
@@ -80,23 +88,23 @@ int one_move_rogue(short dirch, short pickup)
         if (cur_room == PASSAGE) {
             cur_room = (short)get_room_number(row, col);
             if (cur_room >= 0 && (rooms[cur_room].is_room & R_MAZE)) {
-                light_passage(row, col);
+                if (!blind) light_passage(row, col);
                 cur_room = PASSAGE;
             } else {
-                light_up_room(cur_room);
+                if (!blind) light_up_room(cur_room);
                 wake_room(cur_room, 1, row, col);
             }
         } else {
-            light_passage(row, col);
+            if (!blind) light_passage(row, col);
         }
     } else if (DUNGEON(rogue.row, rogue.col) == TILE_DOOR &&
                DUNGEON(row, col) == TILE_TUNNEL) {
-        light_passage(row, col);
+        if (!blind) light_passage(row, col);
         wake_room(cur_room, 0, rogue.row, rogue.col);
         darken_room(cur_room);
         cur_room = PASSAGE;
     } else if (DUNGEON(row, col) == TILE_TUNNEL) {
-        light_passage(row, col);
+        if (!blind) light_passage(row, col);
     }
 
     rogue.row = row;
@@ -114,7 +122,7 @@ int one_move_rogue(short dirch, short pickup)
             desc[length++] = (char)DC_R_BLACKET;
             desc[length] = '\0';
         }
-        message_mz((u8 *)desc, 1);
+        message((char *)desc, 1);
         if (obj->what_is == GOLD) free_object(obj);
         reg_move();
         return STOPPED_ON_SOMETHING;
@@ -131,22 +139,22 @@ boolean check_hunger(boolean messages_only)
 
     if (rogue.moves_left == HUNGRY) {
         get_message(71, (u8 *)hunger_str, sizeof(hunger_str));
-        message_id_mz(72, 0);
+        message_id(72, 0);
     }
     if (rogue.moves_left == WEAK) {
         get_message(73, (u8 *)hunger_str, sizeof(hunger_str));
-        message_id_mz(74, 0);
+        message_id(74, 0);
     }
     if (rogue.moves_left <= FAINT) {
         if (rogue.moves_left == FAINT) {
             get_message(75, (u8 *)hunger_str, sizeof(hunger_str));
-            message_id_mz(76, 0);
+            message_id(76, 0);
         }
         n = (short)get_rand(0, FAINT - rogue.moves_left);
         if (n > 0) {
             fainted = 1;
             if (rand_percent(40)) ++rogue.moves_left;
-            message_id_mz(77, 0);
+            message_id(77, 0);
             for (i = 0; i < n && !game_over; ++i) {
                 if (coin_toss()) mv_mons();
             }
@@ -173,6 +181,8 @@ boolean reg_move(void)
         m_moves = 0;
         wanderer();
     }
+    if (blind && !(--blind)) unblind();
+    if (confused && !(--confused)) unconfuse();
     heal();
     return fainted;
 }

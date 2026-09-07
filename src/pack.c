@@ -8,6 +8,7 @@
  *
  */
 #include "rogue.h"
+#include "display.h"
 #include "invent.h"
 #include "message.h"
 #include "move.h"
@@ -85,24 +86,24 @@ drop(void)
     if (object_at(&level_objects, rogue.row, rogue.col) ||
         (rogue.row == stairs_row && rogue.col == stairs_col) ||
         trap_at(rogue.row, rogue.col) != NO_TRAP) {
-        message_id_mz(88, 0);
+        message_id(88, 0);
         return;
     }
     if (!rogue.pack.next_object) {
-        message_id_mz(89, 0);
+        message_id(89, 0);
         return;
     }
     ch = (short)pack_letter(0, ALL_OBJECTS);
     if (ch == CANCEL) return;
     obj = get_letter_object(ch);
     if (!obj) {
-        message_id_mz(91, 0);
+        message_id(91, 0);
         return;
     }
     if (obj->in_use_flags &
         (BEING_WIELDED | BEING_WORN | ON_LEFT_HAND | ON_RIGHT_HAND)) {
         if (obj->is_cursed) {
-            message_id_mz(85, 0);
+            message_id(85, 0);
             return;
         }
         if (obj->in_use_flags & BEING_WIELDED) unwield(obj);
@@ -137,20 +138,19 @@ pack_letter(char *prompt, unsigned short mask)
         if (obj->what_is & mask) break;
     }
     if (!obj) {
-        message_id_mz(93, 0);
+        message_id(93, 0);
         return CANCEL;
     }
-    if (prompt) message_mz((const u8 *)prompt, 0);
-    else if (mask == ALL_OBJECTS) message_id_mz(90, 0);
-    else if (mask == POTION) message_id_mz(231, 0);
-    else if (mask == SCROL) message_id_mz(245, 0);
-    else if (mask == WAND) message_id_mz(278, 0);
-    else if (mask == RING) message_id_mz(161, 0);
-    else if (mask == ARMOR) message_id_mz(97, 0);
-    else if (mask == WEAPON) message_id_mz(101, 0);
-    else message_id_mz(262, 0);
-    move((u8)rogue.row, (u8)rogue.col);
-    refresh();
+    if (prompt) message(prompt, 0);
+    else if (mask == ALL_OBJECTS) message_id(90, 0);
+    else if (mask == POTION) message_id(231, 0);
+    else if (mask == SCROL) message_id(245, 0);
+    else if (mask == WAND) message_id(278, 0);
+    else if (mask == RING) message_id(161, 0);
+    else if (mask == ARMOR) message_id(97, 0);
+    else if (mask == WEAPON) message_id(101, 0);
+    else message_id(262, 0);
+    refresh_dungeon();
     ch = rgetchar();
     check_message();
     return (short)ch;
@@ -162,11 +162,11 @@ take_off(void)
     object *obj = rogue.armor;
 
     if (!obj) {
-        message_id_mz(95, 0);
+        message_id(95, 0);
         return;
     }
     if (obj->is_cursed) {
-        message_id_mz(85, 0);
+        message_id(85, 0);
         return;
     }
     unwear(obj);
@@ -181,7 +181,7 @@ wear(void)
     object *obj;
 
     if (rogue.armor) {
-        message_id_mz(96, 0);
+        message_id(96, 0);
         return;
     }
     ch = (short)pack_letter(0, ARMOR);
@@ -190,11 +190,11 @@ wear(void)
         return;
     }
     if (!(obj = get_letter_object(ch))) {
-        message_id_mz(98, 0);
+        message_id(98, 0);
         return;
     }
     if (obj->what_is != ARMOR) {
-        message_id_mz(99, 0);
+        message_id(99, 0);
         return;
     }
     object_message(obj, 100);
@@ -231,7 +231,7 @@ wield(void)
     object *obj;
 
     if (rogue.weapon && rogue.weapon->is_cursed) {
-        message_id_mz(85, 0);
+        message_id(85, 0);
         return;
     }
     ch = (short)pack_letter(0, WEAPON);
@@ -240,16 +240,16 @@ wield(void)
         return;
     }
     if (!(obj = get_letter_object(ch))) {
-        message_id_mz(102, 0);
+        message_id(102, 0);
         return;
 
     }
     if (obj->what_is & (ARMOR | RING)) {
-        message_id_mz((obj->what_is == ARMOR) ? 104 : 105, 0);
+        message_id((obj->what_is == ARMOR) ? 104 : 105, 0);
         return;
     }
     if (obj == rogue.weapon) {
-        message_id_mz(106, 0);
+        message_id(106, 0);
     } else {
         unwield(rogue.weapon);
         object_message(obj, 107);
@@ -282,7 +282,7 @@ static void object_message(object *obj, short msg_id)
     get_desc(obj, desc, 0);
     for (length = 0; desc[length] != '\0'; ++length) {}
     get_message(msg_id, (u8 *)desc + length, ROGUE_COLUMNS - length);
-    message_mz((u8 *)desc, 0);
+    message((char *)desc, 0);
 }
 
 int has_amulet(void)
