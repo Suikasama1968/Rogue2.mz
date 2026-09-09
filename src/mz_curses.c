@@ -141,25 +141,7 @@ int mvaddch(u8 y, u8 x, u16 ch)
 */
 int addstr(const u8 *str)
 {
-    u16 cset = DC_CSET_1;
-
-    while (*str != '\0') {
-        u16 ch;
-
-        if (*str == DC_NICOCHAN_0) { // 英大文字・カタカナモード
-            cset = DC_CSET_0;
-            ++str;
-            continue;
-        }
-        if (*str == DC_NICOCHAN_1) { // 英子文字ひらがなモード
-            cset = DC_CSET_1;
-            ++str;
-            continue;
-        }
-        ch = (u16)*str++ | cset | ((u16)main_window._attrs << 8);
-        addch(ch);
-    }
-    return 0;
+    return addnstr(str, 255);
 }
 
 int mvaddstr(u8 y, u8 x, const u8 *str)
@@ -173,8 +155,24 @@ int mvaddstr(u8 y, u8 x, const u8 *str)
 */
 int addnstr(const u8 *str, u8 length)
 {
-    while (length--) {
-        addch((u16)*str++);
+    u16 cset = DC_CSET_1;
+
+    while (length && *str != '\0') {
+        u16 ch;
+
+        if (*str == DC_NICOCHAN_0) {
+            cset = DC_CSET_0;
+            ++str;
+            continue;
+        }
+        if (*str == DC_NICOCHAN_1) {
+            cset = DC_CSET_1;
+            ++str;
+            continue;
+        }
+        ch = (u16)*str++ | cset | ((u16)main_window._attrs << 8);
+        addch(ch);
+        --length;
     }
     return 0;
 }

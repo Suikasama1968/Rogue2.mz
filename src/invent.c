@@ -51,7 +51,7 @@ void inventory(object *pack, unsigned short mask)
     while (obj) {
         object *next = obj;
         u8 rows = 0;
-        u8 line[40];
+        u8 line[ROGUE_COLUMNS + 3];
         u8 row;
 
         while (next && rows < INVENTORY_PAGE_ROWS) {
@@ -72,7 +72,7 @@ void inventory(object *pack, unsigned short mask)
                 memset(dungeon_attr +
                        (unsigned int)(row + 1) * ROGUE_COLUMNS + col,
                        0x70, 40);
-                mvaddstr((u8)(row + 1), col, line);
+                mvaddnstr((u8)(row + 1), col, line, 40);
                 ++row;
             }
             obj = obj->next_object;
@@ -83,7 +83,7 @@ void inventory(object *pack, unsigned short mask)
                (unsigned int)(rows + 1) * ROGUE_COLUMNS + col, 0x70, 40);
 
         (void)get_message(518, line, sizeof(line));
-        mvaddstr((u8)(rows + 1), col, line);
+        mvaddnstr((u8)(rows + 1), col, line, 40);
         move((u8)rogue.row, (u8)rogue.col);
         refresh();
         while (rgetchar() != ' ') {}
@@ -245,25 +245,23 @@ static void save_inventory_rows(u8 col, u8 rows)
 {
     u8 row;
 
-    row = rows - 1;
-    do {
+    for (row = 0; row < rows; row++) {
         memcpy(descs_text[row],
                dungeon + (unsigned int)(row + 1) * ROGUE_COLUMNS + col, 40);
         memcpy(descs_attr[row],
                dungeon_attr + (unsigned int)(row + 1) * ROGUE_COLUMNS + col,
                40);
-    } while (row--);
+    }
 }
 
 static void restore_inventory_rows(u8 col, u8 rows)
 {
     u8 row;
 
-    row = rows - 1;
-    do {
+    for (row = 0; row < rows; row++) {
         memcpy(dungeon + (unsigned int)(row + 1) * ROGUE_COLUMNS + col,
                descs_text[row], 40);
         memcpy(dungeon_attr + (unsigned int)(row + 1) * ROGUE_COLUMNS + col,
                descs_attr[row], 40);
-    } while (row--);
+    }
 }
