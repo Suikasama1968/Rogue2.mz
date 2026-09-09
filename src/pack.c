@@ -133,6 +133,7 @@ pack_letter(char *prompt, unsigned short mask)
 {
     object *obj;
     int ch;
+    short msg_id;
 
     for (obj = rogue.pack.next_object; obj; obj = obj->next_object) {
         if (obj->what_is & mask) break;
@@ -141,15 +142,37 @@ pack_letter(char *prompt, unsigned short mask)
         message_id(93, 0);
         return CANCEL;
     }
-    if (prompt) message(prompt, 0);
-    else if (mask == ALL_OBJECTS) message_id(90, 0);
-    else if (mask == POTION) message_id(231, 0);
-    else if (mask == SCROL) message_id(245, 0);
-    else if (mask == WAND) message_id(278, 0);
-    else if (mask == RING) message_id(161, 0);
-    else if (mask == ARMOR) message_id(97, 0);
-    else if (mask == WEAPON) message_id(101, 0);
-    else message_id(262, 0);
+    if (prompt) {
+        message(prompt, 0);
+    } else {
+        switch (mask) {
+        case ALL_OBJECTS:
+            msg_id = 90;
+            break;
+        case POTION:
+            msg_id = 231;
+            break;
+        case SCROL:
+            msg_id = 245;
+            break;
+        case WAND:
+            msg_id = 278;
+            break;
+        case RING:
+            msg_id = 161;
+            break;
+        case ARMOR:
+            msg_id = 97;
+            break;
+        case WEAPON:
+            msg_id = 101;
+            break;
+        default:
+            msg_id = 262;
+            break;
+        }
+        message_id(msg_id, 0);
+    }
     refresh_dungeon();
     ch = rgetchar();
     check_message();

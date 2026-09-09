@@ -19,6 +19,7 @@
 #include "machdep.h"
 #include "message.h"
 #include "display.h"
+#include "invent.h"
 #include "object.h"
 #include "pack.h"
 #include "random.h"
@@ -57,6 +58,7 @@ init(int argc, char *argv[])
 
     seed = md_gseed();
     (void) srrandom(seed);
+    make_scroll_titles();
     
     level_objects.next_object = 0;
     level_monsters.next_object = 0;

@@ -137,6 +137,28 @@ steal_item(object *monster)
     disappear(monster);
 }
 
+int
+m_confuse(object *monster)
+{
+    u8 name[20];
+
+    if (!rogue_can_see(monster->row, monster->col)) {
+        return 0;
+    }
+    if (rand_percent(45)) {
+        monster->m_flags &= ~CONFUSES;
+        return 0;
+    }
+    if (rand_percent(55)) {
+        monster->m_flags &= ~CONFUSES;
+        get_message(monster->m_name_id, name, sizeof(name));
+        message_id(209, name);
+        confuse();
+        return 1;
+    }
+    return 0;
+}
+
 static void
 disappear(object *monster)
 {

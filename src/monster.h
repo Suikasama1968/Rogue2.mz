@@ -10,6 +10,7 @@ extern void wake_room(short rn, boolean entering, short row, short col);
 extern int rogue_can_see(int row, int col);
 extern void wanderer(void);
 extern void party_monsters(int rn, int n);
+extern void show_monsters(void);
 extern void create_monster(void);
 
 #endif /* not __MONSTER_H__ */

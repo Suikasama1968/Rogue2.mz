@@ -86,7 +86,7 @@ gr_row_col(short *row, short *col, unsigned short mask)
 int
 gr_room(void)
 {
-    short i;
+    u8 i;
 
     do {
         i = get_rand(0, MAXROOMS - 1);
@@ -97,14 +97,17 @@ gr_room(void)
 
 int party_objects(int rn)
 {
-    short i, tries, n, row, col;
+    u8 i, tries, n;
+    short row, col;
     object *obj;
 
-    n = (short)get_rand(5, 10);
-    for (i = 0; i < n; ++i) {
+    n = (u8)get_rand(5, 10);
+    i = 0;
+    do {    // z88dk メモリ削減対策(while->doに変更)
         obj = gr_object();
         if (!obj) continue;
-        for (tries = 0; tries < 100; ++tries) {
+        tries = 0;
+        do {    // z88dk メモリ削減対策(while->doに変更)
             row = (short)get_rand(rooms[rn].top_row + 1, rooms[rn].bottom_row - 1);
             col = (short)get_rand(rooms[rn].left_col + 1, rooms[rn].right_col - 1);
             if ((DUNGEON(row,col) == TILE_FLOOR || DUNGEON(row,col) == TILE_TUNNEL) &&
@@ -112,61 +115,65 @@ int party_objects(int rn)
                 place_at(obj, row, col);
                 break;
             }
-        }
+        } while (++tries < 100);
         if (tries == 100) free_object(obj);
-    }
+    } while (++i < n);
     return n;
 }
 
 int
 get_room_number(int row, int col)
 {
-    short i;
+    u8 i;
 
-    for (i = 0; i < MAXROOMS; i++) {
+    i = 0;
+    do {
         if (room_exists[i] &&
             row >= rooms[i].top_row && row <= rooms[i].bottom_row &&
             col >= rooms[i].left_col && col <= rooms[i].right_col) {
             return i;
         }
-    }
+    } while (++i < MAXROOMS);
     return (NO_ROOM);
 }
 
 int
 is_all_connected(void)
 {
-    short i, starting_room = 0;
+    u8 i, starting_room = 0;
 
-    for (i = 0; i < MAXROOMS; i++) {
+    i = 0;
+    do {
         rooms_visited[i] = 0;
         if (rooms[i].is_room & (R_ROOM | R_MAZE)) {
             starting_room = i;
         }
-    }
+    } while (++i < MAXROOMS);
 
     visit_rooms(starting_room);
 
-    for (i = 0; i < MAXROOMS; i++) {
+    i = 0;
+    do {
         if ((rooms[i].is_room & (R_ROOM | R_MAZE)) && (!rooms_visited[i])) {
             return 0;
         }
-    }
+    } while (++i < MAXROOMS);
     return 1;
 }
 
 void
 visit_rooms(int rn)
 {
-    short i;
+    u8 i;
     short oth_rn;
 
     rooms_visited[rn] = 1;
 
-    for (i = 0; i < 4; i++) {
+    i = 0;
+    do {
         oth_rn = rooms[rn].doors[i].oth_room;
         if ((oth_rn >= 0) && (!rooms_visited[oth_rn])) {
             visit_rooms(oth_rn);
         }
-    }
+    } while (++i < 4);
 }

@@ -10,6 +10,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include "rogue.h"
+#include "move.h"
 #include "mz_curses.h"
 #include "mz_display.h"
 #include "mz_system.h"
@@ -243,12 +245,6 @@ static int keycode_to_ascii(u8 key, u8 strobe)
     return ch;
 }
 
-static int is_repeat_key(u8 key)
-{
-    return key == 'h' || key == 'j' || key == 'k' || key == 'l' ||
-           key == 'y' || key == 'u' || key == 'b' || key == 'n';
-}
-
 /* 文字キーがすべて離されるまで待つ。SHIFTキー単独は対象外。 */
 static void wait_key_release(void)
 {
@@ -296,6 +292,8 @@ int getch(void)
         }
     }
 KEY_PRESSED:
-    if (!is_repeat_key(key)) wait_key_release();
+    // Rogue本体のget_direction()に同機能の関数がありそちらを利用
+    // サイズ削減のためであり、本来はmz_curses.c内で閉じるべき
+    if (!is_direction(key) || key == CANCEL) wait_key_release();
     return key;
 }

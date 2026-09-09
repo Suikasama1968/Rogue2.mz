@@ -105,6 +105,10 @@ extern "C" {
 // モンスターテーブル
 #define MONSTER_TABLE_ADDR 0xe800
 
+// 巻き物のタイトル（モンスターテーブルの後方）
+#define SCROLL_TITLES_ADDR  0xec00
+#define SCROLL_TITLES_SIZE  0x0198
+
 // PCG関連
 #define PCG_RAM         0xd000
 #define BANK_RED        0x02

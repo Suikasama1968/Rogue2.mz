@@ -15,17 +15,21 @@
 #include "mz_system.h"
 #include "object.h"
 #include "pack.h"
+#include "random.h"
 
 #define INVENTORY_PAGE_ROWS 8
 #define INVENTORY_SAVE_ROWS (INVENTORY_PAGE_ROWS + 1)
 
 #define descs_text ((u8 (*)[40])DESCS_TEXT_ADDR)
 #define descs_attr ((u8 (*)[40])DESCS_ATTR_ADDR)
+#define sc_title ((u8 (*)[34])SCROLL_TITLES_ADDR)
 
 typedef char descs_text_size_check[
     INVENTORY_SAVE_ROWS * 40 <= DESCS_TEXT_SIZE ? 1 : -1];
 typedef char descs_attr_size_check[
     INVENTORY_SAVE_ROWS * 40 <= DESCS_ATTR_SIZE ? 1 : -1];
+typedef char scroll_titles_size_check[
+    SCROLS * 34 <= SCROLL_TITLES_SIZE ? 1 : -1];
 
 static short mz_number(u8 *buffer, unsigned short number);
 static short append_message(u8 *buffer, short length, short msg_id);
@@ -87,6 +91,30 @@ void inventory(object *pack, unsigned short mask)
         move((u8)rogue.row, (u8)rogue.col);
         refresh();
         while (obj && !(obj->what_is & mask)) obj = obj->next_object;
+    }
+}
+
+void make_scroll_titles(void)
+{
+    short i, j, len;
+    short sylls, s;
+    u8 n, *title;
+
+    for (i = 0; i < SCROLS; i++) {
+        sylls = get_rand(2, 5);
+        title = sc_title[i];
+        *title = DC_L_BRACKET;
+        len = 1;
+        for (j = 0; j < sylls; j++) {
+            s = get_rand(1, MAXSYLLABLES - 1);
+            (void)find_message((short)(454 + s), &n);
+            if (len + n - 1 >= MAX_TITLE_LENGTH - 2) break;
+            (void)get_message((short)(454 + s), title + len,
+                              (short)(34 - len));
+            len += n;
+        }
+        title[len - 1] = DC_R_BRACKET;
+        title[len] = '\0';
     }
 }
 
@@ -156,7 +184,11 @@ void get_desc(object *obj, char *desc, boolean capitalized)
     if (obj->what_is == SCROL) {
         if (obj->quantity > 1) length = append_message(buffer, length, 32);
         else { length = 0; buffer[0] = '\0'; }
-        append_message(buffer, length, 454);
+        (void)strcpy((char *)(buffer + length),
+                     (const char *)sc_title[obj->which_kind]);
+        length += (short)strlen((const char *)sc_title[obj->which_kind]);
+        length = append_message(buffer, length, 33);
+        append_message(buffer, length, 3);
         return;
     }
     if (obj->what_is == WAND) {
@@ -213,23 +245,25 @@ static void save_inventory_rows(u8 col, u8 rows)
 {
     u8 row;
 
-    for (row = 0; row < rows; ++row) {
+    row = rows - 1;
+    do {
         memcpy(descs_text[row],
                dungeon + (unsigned int)(row + 1) * ROGUE_COLUMNS + col, 40);
         memcpy(descs_attr[row],
                dungeon_attr + (unsigned int)(row + 1) * ROGUE_COLUMNS + col,
                40);
-    }
+    } while (row--);
 }
 
 static void restore_inventory_rows(u8 col, u8 rows)
 {
     u8 row;
 
-    for (row = 0; row < rows; ++row) {
+    row = rows - 1;
+    do {
         memcpy(dungeon + (unsigned int)(row + 1) * ROGUE_COLUMNS + col,
                descs_text[row], 40);
         memcpy(dungeon_attr + (unsigned int)(row + 1) * ROGUE_COLUMNS + col,
                descs_attr[row], 40);
-    }
+    } while (row--);
 }

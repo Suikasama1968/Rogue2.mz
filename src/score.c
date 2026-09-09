@@ -81,7 +81,7 @@ killed_by(object *monster, short other)
     values[0] = cur_level;
     values[1] = rogue.gold;
     values[2] = rogue.exp_points;
-    mz_sprintf(stats, "Level:%d Gold:%ld Exp:%ld", values);
+    mz_sprintf(stats, 526, values);
     length = mz_display_length(stats);
     mvaddstr(18, (u8)((40 - length) / 2), stats);
 

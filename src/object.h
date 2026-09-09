@@ -1,6 +1,9 @@
 #if !defined( __OBJECT_H__ )
 #define __OBJECT_H__
 
+#define OBJECT_WAS_HIDDEN 0x40
+#define OBJECT_DETECTED   0x80
+
 extern void put_stairs(void);
 extern void put_objects(void);
 extern void put_gold(void);
@@ -21,6 +24,7 @@ extern void gr_weapon(object *obj, int assign_wk);
 extern void gr_armor(object *obj, int assign_wk);
 extern void rand_place(object *obj);
 extern void clear_level_objects(void);
+extern void show_objects(void);
 extern void make_party(void);
 extern int next_party(void);
 extern unsigned short identified_potions;

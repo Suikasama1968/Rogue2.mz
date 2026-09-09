@@ -10,6 +10,8 @@
  *
  */
 
+#include <string.h>
+
 #include "rogue.h"
 #include "object.h"
 #include "pack.h"
@@ -61,9 +63,9 @@ put_objects(void)
     }
 
     if (cur_level >= AMULET_LEVEL && !has_amulet()) put_amulet();
-    
+
     while (n < 8 && rand_percent(33)) ++n;
-    
+
     for (i = 0; i < n; i++) {
         obj = gr_object();
         if (obj) rand_place(obj);
@@ -144,28 +146,40 @@ object *
 gr_object(void)
 {
     object *obj;
-    unsigned short what_is;
 
-    if (foods < cur_level / 3) {
-        what_is = FOOD;
-        ++foods;
-    } else {
-        what_is = gr_what_is();
-    }
-
-    /* 未移植の種類は、本家の抽選比率を変えず今回は配置しない。 */
-    if (what_is != FOOD && what_is != POTION && what_is != SCROL &&
-        what_is != WAND &&
-        what_is != WEAPON && what_is != ARMOR && what_is != RING) return 0;
     obj = alloc_object();
     if (!obj) return 0;
-    if (what_is == FOOD) get_food(obj, 0);
-    else if (what_is == POTION) gr_potion(obj);
-    else if (what_is == SCROL) gr_scroll(obj);
-    else if (what_is == WAND) gr_wand(obj);
-    else if (what_is == WEAPON) gr_weapon(obj, 1);
-    else if (what_is == ARMOR) gr_armor(obj, 1);
-    else gr_ring(obj, 1);
+
+    if (foods < cur_level / 3) {
+        obj->what_is = FOOD;
+        foods++;
+    } else {
+        obj->what_is = gr_what_is();
+    }
+
+    switch (obj->what_is) {
+    case FOOD:
+        get_food(obj, 0);
+        break;
+    case POTION:
+        gr_potion(obj);
+        break;
+    case SCROL:
+        gr_scroll(obj);
+        break;
+    case WAND:
+        gr_wand(obj);
+        break;
+    case WEAPON:
+        gr_weapon(obj, 1);
+        break;
+    case ARMOR:
+        gr_armor(obj, 1);
+        break;
+    case RING:
+        gr_ring(obj, 1);
+        break;
+    }
     return obj;
 }
 
@@ -182,37 +196,54 @@ void clear_level_objects(void)
     level_objects.next_object = 0;
 }
 
-
-void gr_potion(object *obj)
+unsigned short
+gr_what_is(void)
 {
-    static const u8 per[] = { 10, 20, 30, 40, 50, 55, 65, 75 };
-    static const u8 kinds[] = {
-        INCREASE_STRENGTH, RESTORE_STRENGTH, HEALING, EXTRA_HEALING,
-        POISON, RAISE_LEVEL, BLINDNESS, CONFUSION
+    short percent;
+    int i;
+    static short per[] = { 30, 60, 64, 74, 83, 88, 91 };
+    static unsigned short ret[] = {
+        SCROL, POTION, WAND, WEAPON, ARMOR, FOOD, RING
     };
-    short percent = (short)get_rand(1, 75);
-    short i;
 
-    obj->what_is = POTION;
-    for (i = 0; i < (short)sizeof(per); ++i) {
-        if (percent <= per[i]) {
-            obj->which_kind = kinds[i];
-            return;
-        }
+    percent = get_rand(1, 91);
+
+    for (i = 0;; i++) {
+        if (percent <= per[i]) return ret[i];
     }
 }
 
 void
 gr_scroll(object *obj)
 {
+    short percent;
+    int i;
     static const u8 per[SCROLS] = {
         5, 11, 16, 21, 36, 44, 51, 56, 65, 74, 80, 85
     };
-    short percent = (short)get_rand(0, 85);
-    short i;
 
+    percent = get_rand(0, 85);
     obj->what_is = SCROL;
-    for (i = 0; i < SCROLS; ++i) {
+    for (i = 0;; i++) {
+        if (percent <= per[i]) {
+            obj->which_kind = (unsigned short)i;
+            return;
+        }
+    }
+}
+
+void
+gr_potion(object *obj)
+{
+    short percent;
+    int i;
+    static const u8 per[POTIONS] = {
+        10, 20, 30, 40, 50, 55, 65, 75, 85, 95, 105, 110, 114, 118
+    };
+
+    percent = get_rand(1, 118);
+    obj->what_is = POTION;
+    for (i = 0; i < POTIONS; i++) {
         if (percent <= per[i]) {
             obj->which_kind = (unsigned short)i;
             return;
@@ -302,19 +333,6 @@ get_food(object *obj, boolean force_ration)
     }
 }
 
-unsigned short gr_what_is(void)
-{
-    short percent = (short)get_rand(1, 91);
-
-    if (percent <= 30) return SCROL;
-    if (percent <= 60) return POTION;
-    if (percent <= 64) return WAND;
-    if (percent <= 74) return WEAPON;
-    if (percent <= 83) return ARMOR;
-    if (percent <= 88) return FOOD;
-    return RING;
-}
-
 void rand_place(object *obj)
 {
     short row;
@@ -362,38 +380,46 @@ void put_stairs(void)
     DUNGEON(row, col) = TILE_STAIRS;
 }
 
-object *alloc_object(void)
+object
+*alloc_object(void)
 {
     int i;
 
-    for (i = 0; i < MAX_OBJECTS; ++i) {
+    i = MAX_OBJECTS - 1;
+    do {
         if (!object_used[i]) {
             object_used[i] = 1;
-            object_pool[i].next_object = 0;
             object_pool[i].quantity = 1;
-            object_pool[i].picked_up = 0;
-            object_pool[i].ichar = 0;
-            object_pool[i].in_use_flags = 0;
-            object_pool[i].hit_enchant = 0;
-            object_pool[i].d_enchant = 0;
-            object_pool[i].is_cursed = 0;
-            object_pool[i].is_protected = 0;
             return &object_pool[i];
         }
-    }
+    } while (i--);
     return 0;
 }
 
-void free_object(object *obj)
+void
+free_object(object *obj)
 {
     int i;
 
-    for (i = 0; i < MAX_OBJECTS; ++i) {
+    i = MAX_OBJECTS - 1;
+    do {
         if (obj == &object_pool[i]) {
             object_used[i] = 0;
-            object_pool[i].next_object = 0;
+            memset(obj, 0, sizeof(object));
             return;
         }
+    } while (i--);
+}
+
+void
+show_objects(void)
+{
+    object *obj;
+
+    obj = level_objects.next_object;
+    while (obj) {
+        obj->picked_up |= OBJECT_DETECTED;
+        obj = obj->next_object;
     }
 }
 
@@ -402,4 +428,3 @@ void make_party(void)
     party_room = (short)gr_room();
     party_objects(party_room);
 }
-

@@ -7,5 +7,6 @@ extern void freeze(object *monster);
 extern void sting(object *monster);
 extern void steal_gold(object *monster);
 extern void steal_item(object *monster);
+extern int m_confuse(object *monster);
 
 #endif /* not __SPECHIT_H__ */

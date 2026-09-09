@@ -22,8 +22,12 @@
 
 extern long level_points[];
 
+short halluc = 0;
 short blind = 0;
 short confused = 0;
+short levitate = 0;
+short haste_self = 0;
+boolean detect_monster = 0;
 
 void
 quaff(void)
@@ -77,9 +81,35 @@ quaff(void)
     case BLINDNESS:
         go_blind();
         break;
+    case HALLUCINATION:
+        message_id(239, 0);
+        halluc += get_rand(500, 800);
+        break;
+    case DETECT_MONSTER:
+        show_monsters();
+        if (!(level_monsters.next_object)) {
+            message_id(230, 0);
+        }
+        break;
+    case DETECT_OBJECTS:
+        if (level_objects.next_object) {
+            if (!blind) {
+                show_objects();
+            }
+        } else {
+            message_id(230, 0);
+        }
+        break;
     case CONFUSION:
-        message_id(241, 0);
+        message_id((halluc ? 240 : 241), 0);
         confuse();
+        break;
+    case HASTE_SELF:
+        message_id(243, 0);
+        haste_self += get_rand(11, 21);
+        if (!(haste_self % 2)) {
+            haste_self++;
+        }
         break;
     }
     identified_potions |= (unsigned short)(1U << obj->which_kind);
@@ -283,12 +313,14 @@ void go_blind(void)
     }
 }
 
-void confuse(void)
+void
+confuse(void)
 {
     confused += (short)get_rand(12, 22);
 }
 
-void unconfuse(void)
+void
+unconfuse(void)
 {
     confused = 0;
     message_id(277, 0);

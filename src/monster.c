@@ -28,6 +28,8 @@ typedef char monster_used_size_check[
     MAX_MONSTERS <= MONSTER_USED_SIZE ? 1 : -1];
 
 object level_monsters;
+extern boolean detect_monster;
+extern short haste_self;
 
 #define mon_tab ((const object *)MONSTER_TABLE_ADDR)
 typedef char monster_object_size_check[sizeof(object) == 38 ? 1 : -1];
@@ -72,6 +74,9 @@ mv_mons(void)
     short j;
     short moves;
 
+    if (haste_self % 2) {
+        return;
+    }
     monster = level_monsters.next_object;
     while (monster) {
         if (monster->m_flags & FREEZING_ROGUE) {
@@ -93,6 +98,10 @@ mv_mons(void)
                 monster->m_flags &= ~(ASLEEP | WAKENS);
             }
         } else {
+            if ((monster->m_flags & CONFUSES) && m_confuse(monster)) {
+                monster = monster->next_object;
+                continue;
+            }
             moves = (monster->m_flags & FLIES) ? 2 : 1;
             while (moves-- > 0) {
             dr = rogue.row - monster->row;
@@ -210,7 +219,10 @@ void clear_level_monsters(void)
     u8 i;
 
     level_monsters.next_object = 0;
-    for (i = 0; i < MAX_MONSTERS; ++i) monster_used[i] = 0;
+    i = MAX_MONSTERS - 1;
+    do {
+        monster_used[i] = 0;
+    } while (i--);
 }
 
 object *monster_at(short row, short col)
@@ -255,6 +267,12 @@ void party_monsters(int rn, int n)
     }
 }
 
+void
+show_monsters(void)
+{
+    detect_monster = 1;
+}
+
 void create_monster(void)
 {
     short dr, dc, row, col;
@@ -297,13 +315,14 @@ void wake_room(short rn, boolean entering, short row, short col)
 
 int rogue_can_see(int row, int col)
 {
+    extern short blind;
     short rdif = (short)(row - rogue.row);
     short cdif = (short)(col - rogue.col);
 
-    return ((cur_room != NO_ROOM &&
+    return (!blind && ((cur_room != NO_ROOM &&
              get_room_number(row, col) == cur_room &&
              !(rooms[cur_room].is_room & R_MAZE)) ||
-            (rdif >= -1 && rdif <= 1 && cdif >= -1 && cdif <= 1));
+            (rdif >= -1 && rdif <= 1 && cdif >= -1 && cdif <= 1)));
 }
 
 void wanderer(void)

@@ -26,6 +26,7 @@ unsigned long rogue_turns;
 extern short bear_trap;
 extern short blind;
 extern short confused;
+extern short haste_self;
 
 int is_passable(int row, int col)
 {
@@ -183,6 +184,7 @@ boolean reg_move(void)
     }
     if (blind && !(--blind)) unblind();
     if (confused && !(--confused)) unconfuse();
+    if (haste_self && !(--haste_self)) message_id(79, 0);
     heal();
     return fainted;
 }

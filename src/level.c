@@ -20,6 +20,8 @@
 #include "trap.h"
 #include "object.h"
 
+extern boolean detect_monster;
+
 u8 *dungeon = (u8 *)TEXT_V_VRAM;
 u8 *dungeon_attr = (u8 *)TEXT_V_ATTR;
 u8 room_exists[MAXROOMS];
@@ -138,26 +140,36 @@ make_room(short rn, short r1, short r2, short r3)
         top_row = get_rand(MIN_ROW, MIN_ROW + 5);
         bottom_row = get_rand(MAX_ROW - 5, MAX_ROW);
     } else {
-        if (rn % 3 == 0) {
+        switch (rn % 3) {
+        case 0:
             left_col = 0;
             right_col = COL1 - 1;
-        } else if (rn % 3 == 1) {
+            break;
+        case 1:
             left_col = COL1 + 1;
             right_col = COL2 - 1;
-        } else {
+            break;
+        default:
+        case 2:
             left_col = COL2 + 1;
             right_col = ROGUE_COLUMNS - 1;
+            break;
         }
 
-        if (rn / 3 == 0) {
+        switch (rn / 3) {
+        case 0:
             top_row = MIN_ROW;
             bottom_row = ROW1 - 1;
-        } else if (rn / 3 == 1) {
+            break;
+        case 1:
             top_row = ROW1 + 1;
             bottom_row = ROW2 - 1;
-        } else {
+            break;
+        default:
+        case 2:
             top_row = ROW2 + 1;
             bottom_row = MAX_ROW;
+            break;
         }
 
         if (rn != r1 && rn != r2 && rn != r3 && rand_percent(40)) {
@@ -236,6 +248,7 @@ clear_level(void)
     int rn;
     int d;
 
+    detect_monster = 0;
     memset(dungeon, TILE_ROCK, ROGUE_COLUMNS * STATUS_ROW_1);
     memset(dungeon_attr, ATTR_HIDDEN, ROGUE_COLUMNS * STATUS_ROW_1);
     for (rn = 0; rn < MAXROOMS; ++rn) {
@@ -265,32 +278,42 @@ put_door(room *rm, short dir, short *row, short *col)
                 }
             }
         }
-        if (dir == UPWARD || dir == DOWN) {
+        switch (dir) {
+        case UPWARD:
+        case DOWN:
             *row = (dir == UPWARD) ? rm->top_row : rm->bottom_row;
             *col = c;
             while (r != *row) {
                 DUNGEON(r,c) = TILE_TUNNEL;
                 r += (r > *row) ? -1 : 1;
             }
-        } else {
+            break;
+        case RIGHT:
+        case LEFT:
             *col = (dir == LEFT) ? rm->left_col : rm->right_col;
             *row = r;
             while (c != *col) {
                 DUNGEON(r,c) = TILE_TUNNEL;
                 c += (c > *col) ? -1 : 1;
             }
+            break;
         }
         DUNGEON(*row,*col) = TILE_TUNNEL;
         rm->doors[dir / 2].door_row = *row;
         rm->doors[dir / 2].door_col = *col;
         return;
     }
-    if (dir == UPWARD || dir == DOWN) {
+    switch (dir) {
+    case UPWARD:
+    case DOWN:
         *row = (dir == UPWARD) ? rm->top_row : rm->bottom_row;
         *col = (short)get_rand(rm->left_col + 1, rm->right_col - 1);
-    } else {
+        break;
+    case RIGHT:
+    case LEFT:
         *col = (dir == LEFT) ? rm->left_col : rm->right_col;
         *row = (short)get_rand(rm->top_row + 1, rm->bottom_row - 1);
+        break;
     }
     DUNGEON(*row, *col) = TILE_DOOR;
     rm->doors[dir / 2].door_row = *row;
@@ -391,22 +414,32 @@ void make_maze(short r, short c, short tr, short br, short lc, short rc)
         }
     }
     for (i = 0; i < 4; ++i) {
-        if (dirs[i] == UPWARD && r - 1 >= tr &&
-            DUNGEON(r-1,c) != TILE_TUNNEL && DUNGEON(r-1,c-1) != TILE_TUNNEL &&
-            DUNGEON(r-1,c+1) != TILE_TUNNEL && (r-2 < tr || DUNGEON(r-2,c) != TILE_TUNNEL))
-            make_maze(r-1,c,tr,br,lc,rc);
-        else if (dirs[i] == DOWN && r + 1 <= br &&
-            DUNGEON(r+1,c) != TILE_TUNNEL && DUNGEON(r+1,c-1) != TILE_TUNNEL &&
-            DUNGEON(r+1,c+1) != TILE_TUNNEL && (r+2 > br || DUNGEON(r+2,c) != TILE_TUNNEL))
-            make_maze(r+1,c,tr,br,lc,rc);
-        else if (dirs[i] == LEFT && c - 1 >= lc &&
-            DUNGEON(r,c-1) != TILE_TUNNEL && DUNGEON(r-1,c-1) != TILE_TUNNEL &&
-            DUNGEON(r+1,c-1) != TILE_TUNNEL && (c-2 < lc || DUNGEON(r,c-2) != TILE_TUNNEL))
-            make_maze(r,c-1,tr,br,lc,rc);
-        else if (dirs[i] == RIGHT && c + 1 <= rc &&
-            DUNGEON(r,c+1) != TILE_TUNNEL && DUNGEON(r-1,c+1) != TILE_TUNNEL &&
-            DUNGEON(r+1,c+1) != TILE_TUNNEL && (c+2 > rc || DUNGEON(r,c+2) != TILE_TUNNEL))
-            make_maze(r,c+1,tr,br,lc,rc);
+        switch (dirs[i]) {
+        case UPWARD:
+            if (r - 1 >= tr &&
+                DUNGEON(r-1,c) != TILE_TUNNEL && DUNGEON(r-1,c-1) != TILE_TUNNEL &&
+                DUNGEON(r-1,c+1) != TILE_TUNNEL && (r-2 < tr || DUNGEON(r-2,c) != TILE_TUNNEL))
+                make_maze(r-1,c,tr,br,lc,rc);
+            break;
+        case DOWN:
+            if (r + 1 <= br &&
+                DUNGEON(r+1,c) != TILE_TUNNEL && DUNGEON(r+1,c-1) != TILE_TUNNEL &&
+                DUNGEON(r+1,c+1) != TILE_TUNNEL && (r+2 > br || DUNGEON(r+2,c) != TILE_TUNNEL))
+                make_maze(r+1,c,tr,br,lc,rc);
+            break;
+        case LEFT:
+            if (c - 1 >= lc &&
+                DUNGEON(r,c-1) != TILE_TUNNEL && DUNGEON(r-1,c-1) != TILE_TUNNEL &&
+                DUNGEON(r+1,c-1) != TILE_TUNNEL && (c-2 < lc || DUNGEON(r,c-2) != TILE_TUNNEL))
+                make_maze(r,c-1,tr,br,lc,rc);
+            break;
+        case RIGHT:
+            if (c + 1 <= rc &&
+                DUNGEON(r,c+1) != TILE_TUNNEL && DUNGEON(r-1,c+1) != TILE_TUNNEL &&
+                DUNGEON(r+1,c+1) != TILE_TUNNEL && (c+2 > rc || DUNGEON(r,c+2) != TILE_TUNNEL))
+                make_maze(r,c+1,tr,br,lc,rc);
+            break;
+        }
     }
 }
 
@@ -480,7 +513,7 @@ add_exp(int e, boolean promotion)
             rogue.hp_max += hp;
         }
         value = rogue.exp;
-        mz_sprintf(mz_number, "%d", &value);
+        mz_sprintf(mz_number, 525, &value);
         message_id(53, mz_number);
     }
 }

@@ -20,14 +20,14 @@ static boolean msg_cleared = 1;
 char hunger_str[8] = "";
 extern short add_strength;
 
-static const u8 *find_message(short msg_id, u8 *length)
+const u8 *find_message(short msg_id, u8 *length)
 {
     const u8 *base = (const u8 *)MESG_ADDR;
     const u8 *entry = base;
     unsigned short offset;
     unsigned short id;
 
-    for (;;) {
+    while (1) {
         id = (unsigned short)entry[0] |
              ((unsigned short)entry[1] << 8);
         if (id == MESSAGE_END_ID) return 0;
@@ -61,13 +61,13 @@ void print_stats(int stat_mask)
     values[1] = rogue.gold;
     values[2] = rogue.hp_current;
     values[3] = rogue.hp_max;
-    mz_sprintf(line1, "Level:%u Gold:%ld Hp:%d(%d) ", values);
+    mz_sprintf(line1, 527, values);
     values[0] = rogue.str_current + add_strength;
     values[1] = rogue.str_max;
     values[2] = rogue.armor_class;
     values[3] = rogue.exp;
     values[4] = rogue.exp_points;
-    mz_sprintf(line2, "Str:%d(%d) Arm:%d Exp:%d/%ld", values);
+    mz_sprintf(line2, 528, values);
     mvaddstr(STATUS_ROW_1, 0, line1);
     addstr((const u8 *)hunger_str);
     mvaddstr(STATUS_ROW_2, 0, line2);

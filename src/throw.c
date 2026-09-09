@@ -97,10 +97,11 @@ get_thrown_at_monster(object *obj, short dir, short *row, short *col)
 {
     short old_row = *row;
     short old_col = *col;
-    short i;
+    u8 i;
     u8 tile;
 
-    for (i = 0; i < 24; ++i) {
+    i = 0;
+    do {    // z88dk メモリ削減対策(while->doに変更)
         get_dir_rc(dir, row, col, 0);
         if ((*row == old_row && *col == old_col) ||
             !is_passable(*row, *col)) {
@@ -121,7 +122,7 @@ get_thrown_at_monster(object *obj, short dir, short *row, short *col)
         old_row = *row;
         old_col = *col;
         if (DUNGEON(*row, *col) == TILE_TUNNEL) i += 2;
-    }
+    } while (++i < 24);
     (void)obj;
     return 0;
 }
@@ -130,9 +131,10 @@ void
 flop_weapon(object *weapon, short row, short col)
 {
     object *new_weapon;
-    short i;
+    u8 i;
 
-    for (i = 0; i < 9; ++i) {
+    i = 0;
+    do {    // z88dk メモリ削減対策(while->doに変更)
         short r = row;
         short c = col;
 
@@ -150,25 +152,37 @@ flop_weapon(object *weapon, short row, short col)
         new_weapon->next_object = 0;
         place_at(new_weapon, r, c);
         return;
-    }
+    } while (++i < 9);
     message_id(215, 0);
 }
 
 void
 rand_around(short i, short *r, short *c)
 {
-    static const char ra[9] = { 0, 1, 1, -1, -1, 0, 1, 0, -1 };
-    static const char ca[9] = { 0, 1, -1, 1, -1, 1, 0, -1, 0 };
+    static char pos[9] = { 8, 7, 1, 3, 4, 5, 2, 6, 0 };
     static short row, col;
-    short n;
+    short j;
+    static const char ra[9] = { 1, 1, -1, -1, 0, 1, 0, -1, 0 };
+    static const char ca[9] = { 1, -1, 1, -1, 1, 0, 0, 0, -1 };
 
     if (i == 0) {
+        short x, y, o, t;
+
         row = *r;
         col = *c;
+
+        o = (short)get_rand(1, 8);
+        for (j = 0; j < 5; j++) {
+            x = (short)(get_rand(0, 8) % 9);
+            y = (short)((x + o) % 9);
+            t = pos[x];
+            pos[x] = pos[y];
+            pos[y] = (char)t;
+        }
     }
-    n = (short)((i + get_rand(0, 8)) % 9);
-    *r = row + ra[n];
-    *c = col + ca[n];
+    j = (short)(pos[i] % 9);
+    *r = row + ra[j];
+    *c = col + ca[j];
 }
 
 static void

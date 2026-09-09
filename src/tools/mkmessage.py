@@ -62,6 +62,9 @@ ASCII_MACROS.update({chr(code): "DC_" + chr(code)
                      for code in range(ord("A"), ord("Z") + 1)})
 
 MESSAGE_FORMAT_STRING = 0xFE
+MESSAGE_FORMAT_DECIMAL = 0xFD
+MESSAGE_FORMAT_UNSIGNED = 0xFC
+MESSAGE_FORMAT_LONG = 0xFB
 MESSAGE_CSET_1 = 0xCE
 MESSAGE_CSET_0 = 0xCF
 MZT_HEADER_SIZE = 128
@@ -124,8 +127,20 @@ def encode_message(text, values, line_no):
     index = 0
     katakana = False
     while index < len(text):
+        if text.startswith("%ld", index):
+            encoded.append(MESSAGE_FORMAT_LONG)
+            index += 3
+            continue
         if text.startswith("%s", index):
             encoded.append(MESSAGE_FORMAT_STRING)
+            index += 2
+            continue
+        if text.startswith("%d", index):
+            encoded.append(MESSAGE_FORMAT_DECIMAL)
+            index += 2
+            continue
+        if text.startswith("%u", index):
+            encoded.append(MESSAGE_FORMAT_UNSIGNED)
             index += 2
             continue
         char = text[index]
