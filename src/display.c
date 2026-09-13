@@ -9,9 +9,12 @@
 #include "mz_curses.h"
 #include "monster.h"
 #include "object.h"
+#include "random.h"
 
 extern short blind;
+extern short halluc;
 extern boolean detect_monster;
+extern boolean see_invisible;
 
 /*
  * init_color_attr
@@ -89,7 +92,9 @@ void refresh_dungeon(void)
             } else {
                 obj->picked_up &= ~OBJECT_WAS_HIDDEN;
             }
-            switch (obj->what_is) {
+            if (halluc) {
+                object_char = (u8)gr_obj_char();
+            } else switch (obj->what_is) {
             case GOLD:
                 object_char = DC_STAR;
                 break;
@@ -124,12 +129,16 @@ void refresh_dungeon(void)
         }
     }
     for (obj = level_monsters.next_object; obj; obj = obj->next_object) {
-        if (!blind && (detect_monster ||
-                       DUNGEON_ATTR(obj->row, obj->col) != ATTR_HIDDEN)) {
-            attrset(COLOR_PAIR(PAIR_MONSTER));
+        if (!blind && (detect_monster || rogue_can_see(obj->row, obj->col)) &&
+            (!(obj->m_flags & INVISIBLE) || detect_monster || see_invisible)) {
+            attrset(COLOR_PAIR((obj->m_flags & IMITATES) ?
+                               PAIR_OBJECT : PAIR_MONSTER));
             obj->trail_char = DUNGEON(obj->row, obj->col);
             obj->picked_up = DUNGEON_ATTR(obj->row, obj->col);
-            mvaddch((u8)obj->row, (u8)obj->col, obj->m_char);
+            mvaddch((u8)obj->row, (u8)obj->col,
+                    halluc ? (u8)(DC_A + get_rand(0, MONSTERS - 1)) :
+                    ((obj->m_flags & IMITATES) ?
+                     (u8)obj->disguise : obj->m_char));
         }
     }
     attrset(COLOR_PAIR(PAIR_PLAYER));
@@ -140,8 +149,8 @@ void refresh_dungeon(void)
     DUNGEON(rogue.row, rogue.col) = tile;
     DUNGEON_ATTR(rogue.row, rogue.col) = attr;
     for (obj = level_monsters.next_object; obj; obj = obj->next_object) {
-        if (!blind && (detect_monster ||
-                       DUNGEON_ATTR(obj->row, obj->col) != ATTR_HIDDEN)) {
+        if (!blind && (detect_monster || rogue_can_see(obj->row, obj->col)) &&
+            (!(obj->m_flags & INVISIBLE) || detect_monster || see_invisible)) {
             DUNGEON(obj->row, obj->col) = obj->trail_char;
             DUNGEON_ATTR(obj->row, obj->col) = (u8)obj->picked_up;
         }

@@ -42,9 +42,9 @@ extern "C" {
 #define EIO     57      // I/Oエラー(ディスク異常)   
 
 // Quick Disk インタフェース モニタ互換
-extern u16 QD_open(void);
-extern u16 QD_File_Search(u8 *);
-extern u16 QD_read(u8 *);
+extern u16 QD_open(void) __naked;
+extern u16 QD_File_Search(u8 *) __naked;
+extern u16 QD_read(u8 *) __z88dk_fastcall;
 
 // Quick Disk インタフェース
 extern u16 QD_File_Read(u8 *, u8 *, u16);

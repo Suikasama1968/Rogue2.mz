@@ -15,12 +15,14 @@
 #include "level.h"
 #include "message.h"
 #include "monster.h"
+#include "mz_system.h"
 #include "random.h"
 #include "score.h"
 #include "spechit.h"
 
-boolean game_over;
 extern short add_strength;
+extern short ring_exp, r_rings;
+extern boolean being_held;
 
 static const u8 weapon_damage_n[WEAPONS] = { 1, 1, 1, 1, 1, 2, 3, 4 };
 static const u8 weapon_damage_s[WEAPONS] = { 1, 1, 2, 3, 4, 3, 4, 5 };
@@ -35,29 +37,33 @@ mon_hit(object *monster, char *other, boolean flame)
 {
     int damage, hit_chance;
     int i;
-    u8 name[20];
+    u8 *name = (u8 *)TEMP_BUFFER_ADDR;
 
     (void)other;
     (void)flame;
 
-    get_monster_name(monster, name, sizeof(name));
+    get_monster_name(monster, name, 20);
     hit_chance = monster->m_hit_chance - 2 * rogue.exp;
     if (!rand_percent(hit_chance)) {
         message_id(18, name);
         return;
     }
 
-    damage = 0;
-    for (i = 0; i < monster->m_damage_n1; ++i) {
-        damage += get_rand(1, monster->m_damage_s1);
+    if (monster->m_flags & STATIONARY) {
+        damage = monster->stationary_damage++;
+    } else {
+        damage = 0;
+        for (i = 0; i < monster->m_damage_n1; ++i) {
+            damage += get_rand(1, monster->m_damage_s1);
+        }
+        for (i = 0; i < monster->m_damage_n2; ++i) {
+            damage += get_rand(1, monster->m_damage_s2);
+        }
+        damage -= (damage * rogue.armor_class * 3) / 100;
     }
-    for (i = 0; i < monster->m_damage_n2; ++i) {
-        damage += get_rand(1, monster->m_damage_s2);
-    }
-    damage -= (damage * rogue.armor_class * 3) / 100;
     message_id(19, name);
     if (damage > 0) rogue_damage((short)damage, monster);
-    if (!game_over && (monster->m_flags & SPECIAL_HIT)) special_hit(monster);
+    if (monster->m_flags & SPECIAL_HIT) special_hit(monster);
 }
 
 void
@@ -65,17 +71,19 @@ rogue_hit(object *monster, boolean force_hit)
 {
     int damage, hit_chance;
 
+    if (check_imitator(monster)) return;
     hit_chance = force_hit ? 100 : get_hit_chance(rogue.weapon);
 
     if (!rand_percent(hit_chance)) {
         message_id(22, 0);
-        return;
+    } else {
+        damage = get_weapon_damage(rogue.weapon);
+        if (mon_damage(monster, damage)) { /* still alive? */
+            message_id(23, 0);
+        }
     }
-    damage = get_weapon_damage(rogue.weapon);
-
-    if (mon_damage(monster, damage)) { /* still alive? */
-        message_id(23, 0);
-    }
+    check_gold_seeker(monster);
+    wake_up(monster);
 }
 
 void
@@ -186,14 +194,18 @@ damage_for_strength(void)
 int
 mon_damage(object *monster, int damage)
 {
-    u8 name[20];
+    u8 *name = (u8 *)TEMP_BUFFER_ADDR;
+    short kill_exp;
 
-    monster->m_hp -= (short)damage;
-    if (monster->m_hp > 0) return 1;
-    get_monster_name(monster, name, sizeof(name));
-    message_id(24, name);
+    monster->hp_to_kill -= (short)damage;
+    if (monster->hp_to_kill > 0) return 1;
+    get_monster_name(monster, name, 20);
+    kill_exp = monster->kill_exp;
+    if (monster->m_flags & HOLDS) being_held = 0;
     remove_monster(monster);
-    add_exp(monster->kill_exp, 1);
+    cough_up(monster);
+    message_id(24, name);
+    add_exp(kill_exp, 1);
     return 0;
 }
 
@@ -254,7 +266,7 @@ get_hit_chance(object *weapon)
     short hit_chance;
 
     hit_chance = 40 + 3 * to_hit(weapon);
-    hit_chance += (2 * rogue.exp);
+    hit_chance += (((2 * rogue.exp) + (2 * ring_exp)) - r_rings);
     return hit_chance;
 }
 
@@ -264,6 +276,6 @@ get_weapon_damage(object *weapon)
     short damage;
 
     damage = get_w_damage(weapon) + damage_for_strength();
-    damage += ((rogue.exp + 1) / 2);
+    damage += ((((rogue.exp + ring_exp) - r_rings) + 1) / 2);
     return damage;
 }

@@ -30,7 +30,6 @@ typedef char object_used_size_check[
 
 static short foods;
 short party_counter;
-object level_objects;
 unsigned short identified_potions;
 
 fighter rogue = {
@@ -76,16 +75,18 @@ put_objects(void)
 void
 put_gold(void)
 {
-    int rn;
-    int tries;
+    int i;
+    int j;
     short row;
     short col;
 
-    for (rn = 0; rn < MAXROOMS; ++rn) {
-        if (!room_exists[rn] || !rand_percent(GOLD_PERCENT)) continue;
-        for (tries = 0; tries < 50; ++tries) {
-            row = (short)get_rand(rooms[rn].top_row + 1, rooms[rn].bottom_row - 1);
-            col = (short)get_rand(rooms[rn].left_col + 1, rooms[rn].right_col - 1);
+    for (i = 0; i < MAXROOMS; i++) {
+        if (!room_exists[i] || !rand_percent(GOLD_PERCENT)) {
+            continue;
+        }
+        for (j = 0; j < 50; j++) {
+            row = (short)get_rand(rooms[i].top_row + 1, rooms[i].bottom_row - 1);
+            col = (short)get_rand(rooms[i].left_col + 1, rooms[i].right_col - 1);
             if (DUNGEON(row, col) == TILE_FLOOR &&
                 !object_at(&level_objects, row, col)) {
                 plant_gold(row, col, 0);
@@ -256,7 +257,7 @@ void gr_weapon(object *obj, int assign_wk)
     short kind;
     short percent;
     short blessing;
-    short increment;
+    short increment = 1;
     short i;
 
     obj->what_is = WEAPON;
@@ -308,12 +309,10 @@ void gr_armor(object *obj, int assign_wk)
 void
 gr_wand(object *obj)
 {
-    static const u8 kinds[] = {
-        TELE_AWAY, PUT_TO_SLEEP, MAGIC_MISSILE, CANCELLATION, DO_NOTHING
-    };
+    const u8 *kinds = (const u8 *)WAND_KINDS_ADDR;
 
     obj->what_is = WAND;
-    obj->which_kind = kinds[get_rand(0, sizeof(kinds) - 1)];
+    obj->which_kind = kinds[get_rand(0, WAND_KINDS_SIZE - 1)];
     if (obj->which_kind == MAGIC_MISSILE) {
         obj->hit_enchant = (char)get_rand(6, 12);
     } else {

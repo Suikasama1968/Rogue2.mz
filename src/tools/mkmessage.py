@@ -71,6 +71,15 @@ MZT_HEADER_SIZE = 128
 MZT_ATTRIBUTE_MACHINE_CODE = 0x01
 MONSTER_RECORD_SIZE = 38
 
+LEVEL_POINTS = (
+    10, 20, 40, 80, 160, 320, 640, 1300, 2600, 5200,
+    10000, 20000, 40000, 80000, 160000, 320000, 1000000,
+    3333333, 6666666, 10000000, 99900000,
+)
+
+WAND_VALUES = (25, 50, 45, 8, 55, 2, 25, 20, 20, 0)
+RING_VALUES = (250, 100, 255, 295, 200, 250, 250, 25, 300, 290, 270)
+
 MONSTER_FLAGS = {
     "HASTED": 0o1, "SLOWED": 0o2, "INVISIBLE": 0o4,
     "ASLEEP": 0o10, "WAKENS": 0o20, "WANDERS": 0o40,
@@ -187,17 +196,21 @@ def encode_message(text, values, line_no):
 def make_message_image(messages):
     data = []
     entries = []
+    stored = {}
     data_offset = (len(messages) + 1) * 5
     for msg_id, encoded in messages:
-        entries.append((msg_id, data_offset + len(data), len(encoded)))
-        data.extend(encoded)
-        data.append(0)
+        key = bytes(encoded)
+        if key not in stored:
+            stored[key] = data_offset + len(data)
+            data.extend(encoded)
+            data.append(0)
+        entries.append((msg_id, stored[key], len(encoded)))
     image = bytearray()
     for msg_id, offset, length in entries:
         image.extend(struct.pack("<HHB", msg_id, offset, length))
     image.extend(struct.pack("<HHB", 0xffff, 0, 0))
     image.extend(data)
-    return image
+    return image, {msg_id: offset for msg_id, offset, _ in entries}
 
 
 def parse_damage(value, line_no):
@@ -243,28 +256,77 @@ def parse_monsters(path, display_values):
         m_char = macro_value(display_values, "DC_A", letter, line_no) + \
             ord(letter) - ord("A")
         records.append(struct.pack(
-            "<hhhHHBBbHbbBBhBIhhBBBBhH",
-            0, 0, 0,                 # quantity, row, col
-            0, drop_percent,         # what_is, which_kind/drop_percent
-            0, 0, 0,                 # trail_char, picked_up, ichar
-            0,                       # in_use_flags
-            0, 0,                    # hit_enchant, d_enchant
-            last_level, first_level, # is_cursed/last, is_protected/first
-            hp, m_char, flags, kill_exp, hit_chance,
+            "<IhbhBBhhHhhbbHBHHBBBBBh",
+            flags,
+            hp, m_char, kill_exp,     # quantity/hp, ichar/m_char, kill_exp
+            first_level, last_level, # is_protected/first, is_cursed/last
+            hit_chance, 0,           # class/m_hit_chance, identified
+            drop_percent,            # which_kind/drop_percent
+            0, 0,                    # row, col
+            0, 0,                    # d_enchant, hit_enchant
+            0, 0, 0, 0,             # what_is, picked_up, in_use_flags, next
+            0,                       # trail_char
             damage_n1, damage_s1, damage_n2, damage_s2,
-            name_id, 0))             # next_object
+            name_id))
     if len(records) != 26:
         raise ValueError(f"monster table has {len(records)} records (expected 26)")
     return bytearray(b"".join(records))
 
 
-def make_external_image(messages, monsters, load_address, monster_address):
-    image = make_message_image(messages)
+def make_external_image(messages, monsters, load_address, monster_address,
+                        level_points_address, id_wands_address,
+                        id_rings_address, wand_materials_address,
+                        gems_address, wand_kinds_address,
+                        ring_kinds_address):
+    image, message_offsets = make_message_image(messages)
+
+    def message_pointer(msg_id, required=True):
+        if msg_id in message_offsets:
+            return load_address + message_offsets[msg_id]
+        if required:
+            raise ValueError(f"message {msg_id} is required by external tables")
+        return 0
+
+    def pad_to(address, description):
+        offset = address - load_address
+        if offset < len(image):
+            raise ValueError(f"external data overlaps {description}")
+        image.extend(bytes(offset - len(image)))
+
     monster_offset = monster_address - load_address
     if monster_offset < len(image):
         raise ValueError("message table overlaps monster table")
     image.extend(bytes(monster_offset - len(image)))
     image.extend(monsters)
+    level_points_offset = level_points_address - load_address
+    if level_points_offset < len(image):
+        raise ValueError("monster table overlaps level points table")
+    image.extend(bytes(level_points_offset - len(image)))
+    image.extend(struct.pack("<" + "l" * len(LEVEL_POINTS), *LEVEL_POINTS))
+
+    pad_to(id_wands_address, "wand identification table")
+    for i, value in enumerate(WAND_VALUES):
+        image.extend(struct.pack("<hHHH", value, 0,
+                                 message_pointer(389 + i, False), 0))
+
+    pad_to(id_rings_address, "ring identification table")
+    for i, value in enumerate(RING_VALUES):
+        image.extend(struct.pack("<hHHH", value, 0,
+                                 message_pointer(399 + i, False), 0))
+
+    pad_to(wand_materials_address, "wand material pointers")
+    for msg_id in range(410, 420):
+        image.extend(struct.pack("<H", message_pointer(msg_id)))
+
+    pad_to(gems_address, "ring gem pointers")
+    for msg_id in range(440, 451):
+        image.extend(struct.pack("<H", message_pointer(msg_id)))
+
+    pad_to(wand_kinds_address, "implemented wand kinds")
+    image.extend(bytes(range(10)))
+
+    pad_to(ring_kinds_address, "implemented ring kinds")
+    image.extend(bytes((2, 3, 4, 5, 6, 9, 10)))
     return image
 
 
@@ -287,7 +349,8 @@ def make_mzt_header(filename, data_size, load_address, exec_address):
     return header
 
 
-def write_compressed_mzt(path, image, filename, load_address, exec_address, zx0):
+def write_compressed_mzt(path, image, filename, load_address, exec_address, zx0,
+                         max_compressed_size):
     with tempfile.TemporaryDirectory(dir=path.parent) as temp_dir:
         raw_path = Path(temp_dir) / "rogue_data.bin"
         compressed_path = Path(temp_dir) / "rogue_data.zx0"
@@ -295,6 +358,10 @@ def write_compressed_mzt(path, image, filename, load_address, exec_address, zx0)
         subprocess.run((str(zx0.resolve()), "-f", str(raw_path),
                         str(compressed_path)), check=True)
         compressed = compressed_path.read_bytes()
+    if len(compressed) > max_compressed_size:
+        raise ValueError(
+            f"compressed data is {len(compressed)} bytes "
+            f"(maximum {max_compressed_size})")
     header = make_mzt_header(filename, len(compressed), load_address, exec_address)
     path.write_bytes(header + compressed)
     return len(image), len(compressed)
@@ -309,28 +376,60 @@ def main():
     parser.add_argument("--zx0", type=Path, required=True)
     parser.add_argument("--ids", required=True,
                         help="comma-separated message IDs")
+    parser.add_argument("--exclude-ids", default="",
+                        help="comma-separated IDs omitted from this build")
     parser.add_argument("--mzt-name", default="MESG",
                         help="filename stored in the MZT header")
     parser.add_argument("--load-address", type=lambda value: int(value, 0),
                         default=0xc000)
     parser.add_argument("--exec-address", type=lambda value: int(value, 0),
                         default=0xc000)
+    parser.add_argument("--max-compressed-size",
+                        type=lambda value: int(value, 0), default=0x1000)
     parser.add_argument("--data-address", type=lambda value: int(value, 0),
                         default=0xd000)
     parser.add_argument("--monster-address", type=lambda value: int(value, 0),
                         default=0xe800)
+    parser.add_argument("--level-points-address",
+                        type=lambda value: int(value, 0), default=0xeda0)
+    parser.add_argument("--id-wands-address",
+                        type=lambda value: int(value, 0), default=0xee00)
+    parser.add_argument("--id-rings-address",
+                        type=lambda value: int(value, 0), default=0xee50)
+    parser.add_argument("--wand-materials-address",
+                        type=lambda value: int(value, 0), default=0xeea8)
+    parser.add_argument("--gems-address",
+                        type=lambda value: int(value, 0), default=0xeebc)
+    parser.add_argument("--wand-kinds-address",
+                        type=lambda value: int(value, 0), default=0xeed2)
+    parser.add_argument("--ring-kinds-address",
+                        type=lambda value: int(value, 0), default=0xeedc)
+    parser.add_argument("--data-limit-address",
+                        type=lambda value: int(value, 0), default=0xef00)
     args = parser.parse_args()
     selected = {int(value) for value in args.ids.split(",")}
+    if args.exclude_ids:
+        selected -= {int(value) for value in args.exclude_ids.split(",")}
     values = read_defines(args.display)
     source = parse_messages(args.input, selected)
     encoded = [(msg_id, encode_message(text, values, line_no))
                for msg_id, text, line_no in source]
     monsters = parse_monsters(args.monster, values)
     image = make_external_image(encoded, monsters, args.data_address,
-                                args.monster_address)
+                                args.monster_address,
+                                args.level_points_address,
+                                args.id_wands_address, args.id_rings_address,
+                                args.wand_materials_address,
+                                args.gems_address, args.wand_kinds_address,
+                                args.ring_kinds_address)
+    image_end = args.data_address + len(image)
+    if image_end > args.data_limit_address:
+        raise ValueError(
+            f"external data ends at 0x{image_end:04x} "
+            f"(limit 0x{args.data_limit_address:04x})")
     image_size, compressed_size = write_compressed_mzt(
         args.output, image, args.mzt_name, args.load_address,
-        args.exec_address, args.zx0)
+        args.exec_address, args.zx0, args.max_compressed_size)
     for msg_id, data in encoded:
         print(f"message {msg_id}: {len(data)} bytes")
     print(f"MZT: {args.output} compressed={compressed_size} bytes "

@@ -33,9 +33,9 @@ RETRY:
 /*
     Quick Diskをオープンする
 */
-u16 QD_open(void) __z88dk_fastcall __naked
+u16 QD_open(void) __naked
 {
-    #asm
+__asm
     xor A       // Aレジスタ0クリア
     ld (QDPB), A
     inc A
@@ -56,17 +56,17 @@ QDERROR:
     ld h,   00H
     ld l,   A   // エラーコード
     ret
-    #endasm
+__endasm;
 }
 /*
     指定されたファイルを検索する
     filename : 検索するファイル名(ASCIIコード)
     戻り値 : 0=成功, 0以外=エラーコード
  */
-u16 QD_File_Search(u8 *filename) 
+u16 QD_File_Search(u8 *filename) __naked
 {
 
-    #asm
+__asm
     ld  hl, 2    
     add hl, sp  // 引数の位置へ移動
                 // 後ろから取り出す
@@ -101,7 +101,7 @@ SEARCHLOOP:
     jr  c,  SEARCHNG            // Cフラグセットされていたらエラー終了
     ld  hl, STRING_BUFFER       // 探すファイル名
     ld  de, QD_FILE_NAME        // 読んだファイル名
-    ld  b,  11H                 // 17文字
+    ld  b,  11H                 // 17文字  
 
 FILENAMECHECK:
     ld  a,  (de)
@@ -123,7 +123,7 @@ SEARCHOK:
     ld l,   0   // intの復帰値はHLレジスタ
     ret
 
-    #endasm
+__endasm;
 }
 
 /*
@@ -133,7 +133,7 @@ SEARCHOK:
 */
 u16 QD_read(u8 *address) __z88dk_fastcall __naked
 {
-    #asm
+__asm
     ld  (QDPC), hl
     ld  hl, (QD_FILE_SIZE)
     ld  (QDPE), hl
@@ -151,7 +151,7 @@ READNG:
     ld h,  00H
     ld l,   A   // エラーコード
     ret
-
-    #endasm
+    
+__endasm;
 
 }

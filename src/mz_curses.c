@@ -214,7 +214,7 @@ int refresh(void)
     Rogue本体から通常の文字コードとして扱えるように変換する。
     デフォルトは小文字、SHIFT押下時は大文字(ただしRogueで使用するキーのみ)として返す。
  */
-static int keycode_to_ascii(u8 key, u8 strobe)
+static u8 keycode_to_ascii(u8 key, u8 strobe)
 {
     static const u8 key_table[] = {
         'y', 'z', '@',  0,   0,   0,   0,   0,
@@ -222,7 +222,7 @@ static int keycode_to_ascii(u8 key, u8 strobe)
         'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p',
         'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',
         '1', '2', '3', '4', '5', '6', '7', '8',
-        '\\','^', '-', ' ', '0', '9', ',', '.',
+        '*', '+', '-', ' ', '0', '9', ',', '.',
          0,   0,  'k', 'j', 'l', 'h', '?', '/'
     };
     /* SHIFTで意味が変わるキー。ビット配置はKEYDATAと同じ。 */
@@ -252,7 +252,7 @@ static void wait_key_release(void)
     do {
         KEY_Scan();
         pressed = 0;
-        for (strobe = 1; strobe <= 7; ++strobe) {
+        for (strobe = 1; strobe <= 7; strobe++) {
             if (Key[strobe] != 0) {
                 pressed = 1;
                 break;
@@ -277,7 +277,7 @@ int flushinp(void)
 int getch(void)
 {
     u8 strobe;
-    int key;
+    u8 key;
 
     while(1) {
         KEY_Scan();  // キーをスキャンして KEYDATA に格納

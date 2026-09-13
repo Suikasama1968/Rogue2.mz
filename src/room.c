@@ -15,18 +15,20 @@
 #include "random.h"
 #include "room.h"
 
-static u8 rooms_visited[MAXROOMS];
+#define rooms_visited ((u8 *)ROOMS_VISITED_ADDR)
+
+typedef char rooms_visited_size_check[
+    MAXROOMS <= ROOMS_VISITED_SIZE ? 1 : -1];
 
 void light_up_room(int rn)
 {
-    int row;
-    int col;
+    short i, j;
 
     if (rn < 0 || rn >= MAXROOMS || !room_exists[rn] ||
         (rooms[rn].is_room & R_MAZE)) return;
-    for (row = rooms[rn].top_row; row <= rooms[rn].bottom_row; ++row) {
-        for (col = rooms[rn].left_col; col <= rooms[rn].right_col; ++col) {
-            colorize_dungeon((short)row, (short)col);
+    for (i = rooms[rn].top_row; i <= rooms[rn].bottom_row; i++) {
+        for (j = rooms[rn].left_col; j <= rooms[rn].right_col; j++) {
+            colorize_dungeon((short)i, (short)j);
         }
     }
     attrset(A_NORMAL);
@@ -34,17 +36,15 @@ void light_up_room(int rn)
 
 void light_passage(int row, int col)
 {
-    int r;
-    int c;
-    int first_row = (row > MIN_ROW) ? row - 1 : row;
-    int last_row = (row < MAX_ROW) ? row + 1 : row;
-    int first_col = (col > 0) ? col - 1 : col;
-    int last_col = (col < ROGUE_COLUMNS - 1) ? col + 1 : col;
+    short i, j, i_end, j_end;
 
-    for (r = first_row; r <= last_row; ++r) {
-        for (c = first_col; c <= last_col; ++c) {
-            if (can_move(row, col, r, c)) {
-                colorize_dungeon((short)r, (short)c);
+    i_end = (row < MAX_ROW) ? 1 : 0;
+    j_end = (col < (ROGUE_COLUMNS - 1)) ? 1 : 0;
+
+    for (i = ((row > MIN_ROW) ? -1 : 0); i <= i_end; i++) {
+        for (j = ((col > 0) ? -1 : 0); j <= j_end; j++) {
+            if (can_move(row, col, row + i, col + j)) {
+                colorize_dungeon((short)(row + i), (short)(col + j));
             }
         }
     }
@@ -53,16 +53,15 @@ void light_passage(int row, int col)
 
 void darken_room(short rn)
 {
-    int row;
-    int col;
+    short i,j;
 
     if (rn < 0 || rn >= MAXROOMS || !room_exists[rn] ||
         (rooms[rn].is_room & R_MAZE)) return;
-    for (row = rooms[rn].top_row + 1; row < rooms[rn].bottom_row; ++row) {
-        for (col = rooms[rn].left_col + 1; col < rooms[rn].right_col; ++col) {
-            if (DUNGEON(row, col) != TILE_STAIRS &&
-                !object_at(&level_objects, (short)row, (short)col)) {
-                DUNGEON_ATTR(row, col) = ATTR_HIDDEN;
+    for (i = rooms[rn].top_row + 1; i < rooms[rn].bottom_row; i++) {
+        for (j = rooms[rn].left_col + 1; j < rooms[rn].right_col; j++) {
+            if (DUNGEON(i, j) != TILE_STAIRS &&
+                !object_at(&level_objects, (short)i, (short)j)) {
+                DUNGEON_ATTR(i, j) = ATTR_HIDDEN;
             }
         }
     }
@@ -97,7 +96,7 @@ gr_room(void)
 
 int party_objects(int rn)
 {
-    u8 i, tries, n;
+    u8 i, j, n;
     short row, col;
     object *obj;
 
@@ -106,7 +105,7 @@ int party_objects(int rn)
     do {    // z88dk メモリ削減対策(while->doに変更)
         obj = gr_object();
         if (!obj) continue;
-        tries = 0;
+        j = 0;
         do {    // z88dk メモリ削減対策(while->doに変更)
             row = (short)get_rand(rooms[rn].top_row + 1, rooms[rn].bottom_row - 1);
             col = (short)get_rand(rooms[rn].left_col + 1, rooms[rn].right_col - 1);
@@ -115,8 +114,8 @@ int party_objects(int rn)
                 place_at(obj, row, col);
                 break;
             }
-        } while (++tries < 100);
-        if (tries == 100) free_object(obj);
+        } while (++j < 100);
+        if (j == 100) free_object(obj);
     } while (++i < n);
     return n;
 }

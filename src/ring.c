@@ -12,13 +12,16 @@
 
 #include "rogue.h"
 #include "ring.h"
+#include "invent.h"
 #include "message.h"
 #include "move.h"
+#include "mz_system.h"
 #include "object.h"
 #include "pack.h"
 #include "random.h"
 
-short r_rings, add_strength;
+short r_rings, e_rings, add_strength, ring_exp, regeneration, auto_search;
+boolean sustain_strength, maintain_armor;
 
 void
 put_on_ring(void)
@@ -30,10 +33,11 @@ put_on_ring(void)
         message_id(160, 0);
         return;
     }
-    ch = (short)pack_letter(0, RING);
-    if (ch == CANCEL) return;
+    if ((ch = (short)pack_letter(0, RING)) == CANCEL) {
+        return;
+    }
     if (!(ring = get_letter_object(ch))) {
-        message_id(162, 0);
+        message_id(91, 0);
         return;
     }
     if (ring->what_is != RING) {
@@ -53,7 +57,9 @@ put_on_ring(void)
         } while (ch != CANCEL && ch != 'l' && ch != 'r');
         check_message();
     }
-    if (ch != 'l' && ch != 'r') return;
+    if (ch != 'l' && ch != 'r') {
+        return;
+    }
     if ((ch == 'l' && rogue.left_ring) ||
         (ch == 'r' && rogue.right_ring)) {
         message_id(165, 0);
@@ -61,9 +67,18 @@ put_on_ring(void)
     }
     do_put_on(ring, (boolean)(ch == 'l'));
     ring_stats(1);
-    message_id(403, 0);
+    {
+        char *desc = (char *)TEMP_BUFFER_ADDR;
+        get_desc(ring, desc, 1);
+        message(desc, 0);
+    }
     (void)reg_move();
 }
+
+/*
+ * Do not call ring_stats() from within do_put_on().  It will cause
+ * serious problems when do_put_on() is called from read_pack() in restore().
+ */
 
 void
 do_put_on(object *ring, boolean on_left)
@@ -127,37 +142,86 @@ un_put_on(object *ring)
 void
 gr_ring(object *ring, boolean assign_wk)
 {
+    const u8 *ring_kinds = (const u8 *)RING_KINDS_ADDR;
+
     ring->what_is = RING;
-    if (assign_wk) ring->which_kind = ADD_STRENGTH;
-    do {
-        ring->hit_enchant = (char)get_rand(-2, 2);
-    } while (!ring->hit_enchant);
-    ring->is_cursed = (u8)(ring->hit_enchant < 0);
+    if (assign_wk) {
+        ring->which_kind = ring_kinds[get_rand(0, RING_KINDS_SIZE - 1)];
+    }
+    ring->class = 0;
+    ring->is_cursed = 0;
+    if (ring->which_kind == ADD_STRENGTH ||
+        ring->which_kind == DEXTERITY) {
+        do {
+            ring->class = (short)get_rand(-2, 2);
+        } while (!ring->class);
+        ring->is_cursed = (u8)(ring->class < 0);
+    }
 }
 
 void
 inv_rings(void)
 {
-    if (!r_rings) message_id(167, 0);
-    else message_id(403, 0);
+    char *desc = (char *)TEMP_BUFFER_ADDR;
+
+    if (!r_rings) {
+        message_id(167, 0);
+        return;
+    }
+    if (rogue.left_ring) {
+        get_desc(rogue.left_ring, desc, 1);
+        message(desc, 0);
+    }
+    if (rogue.right_ring) {
+        get_desc(rogue.right_ring, desc, 1);
+        message(desc, 0);
+    }
 }
 
 void
 ring_stats(boolean pr)
 {
+    short i;
     object *ring;
 
     r_rings = 0;
+    e_rings = 0;
     add_strength = 0;
-    ring = rogue.left_ring;
-    if (ring) {
-        ++r_rings;
-        add_strength += ring->hit_enchant;
-    }
-    ring = rogue.right_ring;
-    if (ring) {
-        ++r_rings;
-        add_strength += ring->hit_enchant;
+    ring_exp = 0;
+    regeneration = 0;
+    auto_search = 0;
+    sustain_strength = 0;
+    maintain_armor = 0;
+
+    for (i = 0; i < 2; i++) {
+        if (!(ring = ((i == 0) ? rogue.left_ring : rogue.right_ring))) {
+            continue;
+        }
+        r_rings++;
+        e_rings++;
+        switch (ring->which_kind) {
+        case SLOW_DIGEST:
+            e_rings -= 2;
+            break;
+        case REGENERATION:
+            regeneration++;
+            break;
+        case ADD_STRENGTH:
+            add_strength += ring->class;
+            break;
+        case SUSTAIN_STRENGTH:
+            sustain_strength = 1;
+            break;
+        case DEXTERITY:
+            ring_exp += ring->class;
+            break;
+        case MAINTAIN_ARMOR:
+            maintain_armor = 1;
+            break;
+        case SEARCHING:
+            auto_search += 2;
+            break;
+        }
     }
     if (pr) print_stats(STAT_STRENGTH);
 }

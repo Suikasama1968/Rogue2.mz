@@ -25,11 +25,11 @@
 #include "trap.h"
 
 int
-main(int argc, char *argv[])
+main(void)
 {
     boolean first = 1;
 
-    if (init(argc, argv)) return 1;
+    if (init()) return 1;
 
     for (;;) {
         clear_level();
@@ -47,13 +47,7 @@ main(int argc, char *argv[])
         play_level();
         clear_level_objects();  // free_stuff(&level_objects);
         clear_level_monsters(); // free_stuff(&level_monsters);
-        if (game_over) {
-            break;
-        }
     }
-
-    md_exit(0);
-    return 0;
 }
 
 int
@@ -65,7 +59,6 @@ read_mesg(char *argv_msgfile)
                      
     /* 圧縮データをメッセージ・モンスターテーブル領域へ展開する */
     BANK_DRAM_H();
-    dzx0_decompress_fastcall((void *)MESG_ADDR,
-                            (const void *)MESG_LOAD_ADDR);
+    dzx0_decompress_fastcall((const void *)MESG_LOAD_ADDR,(void *)MESG_ADDR);
     return 0;
 }

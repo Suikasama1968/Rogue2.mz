@@ -29,14 +29,11 @@
 #include "mz_system.h"
 
 int
-init(int argc, char *argv[])
+init(void)
 {
 
     int seed;
     WINDOW *main_window;
-
-    (void)argc;
-    (void)argv;
 
     /* MZ-1500 initialization */
     BANK_DRAM_L(); 
@@ -48,21 +45,24 @@ init(int argc, char *argv[])
         return 1;
     }
 
+    memset((void *)OBJECT_POOL_ADDR, 0x00,
+           OBJECT_POOL_SIZE + OBJECT_USED_SIZE);
+
     /* init curses */
     main_window = initscr();
-    if (main_window == NULL) {
-        BANK_ROM();
+/*  if (main_window == NULL) {
         return 1;
-    } 
+    }
+*/ /* MZ版では必ず成功 */
     init_color_attr();
 
     seed = md_gseed();
     (void) srrandom(seed);
+    get_wand_and_ring_materials();
     make_scroll_titles();
     
     level_objects.next_object = 0;
     level_monsters.next_object = 0;
-    game_over = 0;
     player_init();
     party_counter = (short)get_rand(1, PARTY_TIME);
     ring_stats(0);
@@ -113,10 +113,8 @@ player_init(void)
 }
 
 void
-byebye(int sig)
+byebye(void)
 {
-    (void)sig;
-
     message_id(12, 0);
     refresh();
     md_exit(0);

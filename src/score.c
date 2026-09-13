@@ -10,20 +10,13 @@
  *
  */
 #include "rogue.h"
+#include "machdep.h"
 #include "message.h"
 #include "mz_curses.h"
+#include "pack.h"
 #include "score.h"
 
-static short mz_display_length(const u8 *text)
-{
-    short length = 0;
-
-    while (*text) {
-        if (*text != MZ_STR_CSET_0 && *text != MZ_STR_CSET_1) ++length;
-        ++text;
-    }
-    return length;
-}
+static short mz_display_length(const u8 *text);
 
 void
 killed_by(object *monster, short other)
@@ -39,16 +32,14 @@ killed_by(object *monster, short other)
     short length;
     short suffix_length;
     short i;
-    short id;
     u8 text[40];
     u8 stats[48];
     long values[3];
 
-    game_over = 1;
     rogue.hp_current = 0;
     clear();
 
-    /* メッセージファイル化 for MZ */
+    /* MZ-1500 メッセージファイル化 */
     for ( i = 0; i < 14; i++) {
         (void)get_message(500 + i, text, sizeof(text));
         mvaddstr((u8)(i + 3), 0, text);
@@ -91,7 +82,8 @@ killed_by(object *monster, short other)
     rogue.row = 0;
     rogue.col = 0;
     refresh();
-    while (rgetchar() != ' ') {}
+    wait_for_ack();
+    md_exit(0);
 #endif
 }
 
@@ -99,13 +91,11 @@ void
 win(void)
 {
     u8 text[41];
-    short length;
     short id;
 
-    game_over = 1;
     clear();
 
-    /* メッセージファイル化 for MZ */
+    /* MZ-1500 メッセージファイル化 */
     for (id = 520; id <= 524; ++id) {
         (void)get_message(id, text, sizeof(text));
         mvaddstr((u8)(id - 517), 0, text);
@@ -121,5 +111,19 @@ win(void)
     rogue.row = 0;
     rogue.col = 0;
     refresh();
-    while (rgetchar() != ' ') {}
+    wait_for_ack();
+    md_exit(0);
+}
+
+/* MZ-1500固有の処理 */
+static short mz_display_length(const u8 *text)
+{
+    short length = 0;
+
+    /* にこちゃんマークスキップ*/
+    while (*text) {
+        if (*text != MZ_STR_CSET_0 && *text != MZ_STR_CSET_1) length++;
+        text++;
+    }
+    return length;
 }

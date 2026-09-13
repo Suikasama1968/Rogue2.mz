@@ -3,6 +3,7 @@
 
 extern void inventory(object *pack, unsigned short mask);
 extern void make_scroll_titles(void);
+extern void get_wand_and_ring_materials(void);
 extern void get_desc(object *obj, char *desc, boolean capitalized);
 extern void single_inv(short ichar);
 

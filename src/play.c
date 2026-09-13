@@ -33,7 +33,6 @@ play_level(void)
     int key;
 
     for (;;) {
-        if (game_over) return;
         if (trap_door) {
             trap_door = 0;
             return;
@@ -106,7 +105,7 @@ play_level(void)
             }
             break;
         case 'Q':
-            byebye(0);
+            byebye();
             break;
         default:
             break;

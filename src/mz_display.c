@@ -12,17 +12,20 @@
 /*
     数値を文字列に変換格納する long対応
 */
-static u8 *mz_put_ulong(u8 *dst, unsigned long value)
+u8 mz_number(u8 *dst, unsigned long value)
 {
     u8 work[10];
     u8 length = 0;
+    u8 count;
 
     do {
         work[length++] = (u8)(DC_0 + value % 10);
         value /= 10;
     } while (value);
+    count = length;
     while (length) *dst++ = work[--length];
-    return dst;
+    *dst = '\0';
+    return count;
 }
 
 /*
@@ -54,11 +57,11 @@ int mz_sprintf(u8 *dst, short msg_id, const long *values)
             } else {
                 magnitude = (unsigned long)value;
             }
-            dst = mz_put_ulong(dst, magnitude);
+            dst += mz_number(dst, magnitude);
             break;
         }
         case MESSAGE_FORMAT_UNSIGNED:   // %u
-            dst = mz_put_ulong(dst, (unsigned long)*values++);
+            dst += mz_number(dst, (unsigned long)*values++);
             break;
         default:
             *dst++ = code;

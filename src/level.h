@@ -1,6 +1,10 @@
 #if !defined( __LEVEL_H__ )
 #define __LEVEL_H__
 
+#define level_points ((const long *)LEVEL_POINTS_ADDR)
+typedef char level_points_size_check[
+    sizeof(long) * MAX_EXP_LEVEL <= LEVEL_POINTS_SIZE ? 1 : -1];
+
 extern void clear_level(void);
 extern void make_level(void);
 extern void make_room(short rn, short r1, short r2, short r3);

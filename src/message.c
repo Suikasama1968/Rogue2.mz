@@ -20,36 +20,56 @@ static boolean msg_cleared = 1;
 char hunger_str[8] = "";
 extern short add_strength;
 
-const u8 *find_message(short msg_id, u8 *length)
+void
+message(char *msg, boolean intrpt)
 {
-    const u8 *base = (const u8 *)MESG_ADDR;
-    const u8 *entry = base;
-    unsigned short offset;
-    unsigned short id;
-
-    while (1) {
-        id = (unsigned short)entry[0] |
-             ((unsigned short)entry[1] << 8);
-        if (id == MESSAGE_END_ID) return 0;
-        if (id == (unsigned short)msg_id) {
-            offset = (unsigned short)entry[2] |
-                     ((unsigned short)entry[3] << 8);
-            *length = entry[4];
-            return base + offset;
-        }
-        entry += MESSAGE_ENTRY_SIZE;
-    }
+    (void)intrpt;
+    move(MESSAGE_ROW, 0);
+    addstr((const u8 *)msg);
+    clrtoeol();
+    msg_cleared = 0;
 }
 
-void print_stats(int stat_mask)
+void
+check_message(void)
 {
-    u8 line1[48];
-    u8 line2[48];
+	if (msg_cleared) {
+		return;
+	}
+    move(MESSAGE_ROW, 0);
+    clrtoeol();
+    msg_cleared = 1;
+}
+
+int get_direction(void)
+{
+    int dir;
+
+    message_id(55, 0);
+    while (!is_direction(dir = rgetchar())) {
+    /* sound_bell() */
+    }
+    flushinp();
+    check_message();
+    return dir;
+}
+
+int
+rgetchar(void)
+{
+    return getch();
+}
+
+void
+print_stats(int stat_mask)
+{
+    u8 *line1 = (u8 *)TEMP_BUFFER_ADDR;
+    u8 *line2 = line1 + 48;
     u8 *status1 = dungeon + ROGUE_COLUMNS * STATUS_ROW_1;
     u8 *status2 = dungeon + ROGUE_COLUMNS * STATUS_ROW_2;
     u8 *attr1 = dungeon_attr + ROGUE_COLUMNS * STATUS_ROW_1;
     u8 *attr2 = dungeon_attr + ROGUE_COLUMNS * STATUS_ROW_2;
-    long values[5];
+    long *values = (long *)(line2 + 48);
 
     /* 40列版では2行を一体で整形するため、指定項目を含む全体を再描画する。 */
     (void)stat_mask;
@@ -73,39 +93,41 @@ void print_stats(int stat_mask)
     mvaddstr(STATUS_ROW_2, 0, line2);
 }
 
+/* MZ-1500固有の処理 */
+const u8 *find_message(short msg_id, u8 *length)
+{
+    const u8 *base = (const u8 *)MESG_ADDR;
+    const u8 *entry = base;
+    unsigned short offset;
+    unsigned short id;
+
+    while (1) {
+        id = (unsigned short)entry[0] |
+             ((unsigned short)entry[1] << 8);
+        if (id == MESSAGE_END_ID) return 0;
+        if (id == (unsigned short)msg_id) {
+            offset = (unsigned short)entry[2] |
+                     ((unsigned short)entry[3] << 8);
+            *length = entry[4];
+            return base + offset;
+        }
+        entry += MESSAGE_ENTRY_SIZE;
+    }
+}
+
 short get_message(short msg_id, u8 *buffer, short size)
 {
     const u8 *src;
     u8 stored_length;
     short length;
-    short i;
 
-    if (size <= 0) return 0;
     src = find_message(msg_id, &stored_length);
     if (!src) return 0;
     length = stored_length;
     if (length >= size) length = size - 1;
-    for (i = 0; i < length; ++i) {
-        buffer[i] = src[i];
-    }
+    memcpy(buffer, src, length);
     buffer[length] = '\0';
     return length;
-}
-
-void message(char *msg, boolean intrpt)
-{
-    u8 length = 0;
-    const u8 *p = (const u8 *)msg;
-
-    (void)intrpt;
-    move(MESSAGE_ROW, 0);
-    addstr((const u8 *)msg);
-    while (*p != '\0') {
-        if (*p != MZ_STR_CSET_0 && *p != MZ_STR_CSET_1) ++length;
-        ++p;
-    }
-    while (length++ < ROGUE_COLUMNS) addch(DC_SPC);
-    msg_cleared = 0;
 }
 
 void message_id(short msg_id, const u8 *text)
@@ -128,38 +150,4 @@ void message_id(short msg_id, const u8 *text)
     }
     message_buffer[length] = '\0';
     message((char *)message_buffer, 0);
-}
-
-void check_message(void)
-{
-    u8 col;
-
-    if (msg_cleared) return;
-    move(MESSAGE_ROW, 0);
-    for (col = 0; col < ROGUE_COLUMNS; ++col) addch(DC_SPC);
-    msg_cleared = 1;
-}
-
-int get_direction(void)
-{
-    int dir;
-
-    message_id(55, 0);
-    while (!is_direction(dir = rgetchar())) {
-	    sound_bell();
-    }
-    flushinp();
-    check_message();
-    return dir;
-}
-
-int rgetchar(void)
-{
-    return getch();
-}
-
-void
-sound_bell(void)
-{
-    BELL();
 }

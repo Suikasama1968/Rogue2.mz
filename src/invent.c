@@ -30,9 +30,15 @@ typedef char descs_attr_size_check[
     INVENTORY_SAVE_ROWS * 40 <= DESCS_ATTR_SIZE ? 1 : -1];
 typedef char scroll_titles_size_check[
     SCROLS * 34 <= SCROLL_TITLES_SIZE ? 1 : -1];
+typedef char id_scrolls_size_check[
+    sizeof(struct id) * SCROLS <= ID_SCROLLS_SIZE ? 1 : -1];
+typedef char id_wands_size_check[
+    sizeof(struct id) * WANDS <= ID_WANDS_SIZE ? 1 : -1];
+typedef char id_rings_size_check[
+    sizeof(struct id) * RINGS <= ID_RINGS_SIZE ? 1 : -1];
 
-static short mz_number(u8 *buffer, unsigned short number);
 static short append_message(u8 *buffer, short length, short msg_id);
+static short append_text(u8 *buffer, short length, const char *text);
 static u8 inventory_col(void);
 static void save_inventory_rows(u8 col, u8 rows);
 static void restore_inventory_rows(u8 col, u8 rows);
@@ -51,7 +57,7 @@ void inventory(object *pack, unsigned short mask)
     while (obj) {
         object *next = obj;
         u8 rows = 0;
-        u8 line[ROGUE_COLUMNS + 3];
+        u8 *desc = (u8 *)TEMP_BUFFER_ADDR;
         u8 row;
 
         while (next && rows < INVENTORY_PAGE_ROWS) {
@@ -62,17 +68,20 @@ void inventory(object *pack, unsigned short mask)
         row = 0;
         while (obj && row < rows) {
             if (obj->what_is & mask) {
-                memset(line, 0, sizeof(line));
-                line[0] = (u8)(DC_A + obj->ichar - 'a');
-                line[1] = DC_R_BLACKET;
-                line[2] = DC_SPC;
-                get_desc(obj, (char *)(line + 3), 0);
+                get_desc(obj, (char *)desc, 0);
                 memset(dungeon + (unsigned int)(row + 1) * ROGUE_COLUMNS + col,
                        DC_SPC, 40);
                 memset(dungeon_attr +
                        (unsigned int)(row + 1) * ROGUE_COLUMNS + col,
                        0x70, 40);
-                mvaddnstr((u8)(row + 1), col, line, 40);
+                DUNGEON(row + 1, col) =
+                    (u8)(DC_A + obj->ichar - 'a');
+                DUNGEON(row + 1, col + 1) = DC_R_BLACKET;
+                DUNGEON(row + 1, col + 2) = DC_SPC;
+                DUNGEON_ATTR(row + 1, col) = 0xf0;
+                DUNGEON_ATTR(row + 1, col + 1) = 0xf0;
+                DUNGEON_ATTR(row + 1, col + 2) = 0xf0;
+                mvaddnstr((u8)(row + 1), (u8)(col + 3), desc, 37);
                 ++row;
             }
             obj = obj->next_object;
@@ -82,11 +91,11 @@ void inventory(object *pack, unsigned short mask)
         memset(dungeon_attr +
                (unsigned int)(rows + 1) * ROGUE_COLUMNS + col, 0x70, 40);
 
-        (void)get_message(518, line, sizeof(line));
-        mvaddnstr((u8)(rows + 1), col, line, 40);
+        (void)get_message(518, desc, TEMP_BUFFER_SIZE);
+        mvaddnstr((u8)(rows + 1), col, desc, 40);
         move((u8)rogue.row, (u8)rogue.col);
         refresh();
-        while (rgetchar() != ' ') {}
+        wait_for_ack();
         restore_inventory_rows(col, (u8)(rows + 1));
         move((u8)rogue.row, (u8)rogue.col);
         refresh();
@@ -115,27 +124,61 @@ void make_scroll_titles(void)
         }
         title[len - 1] = DC_R_BRACKET;
         title[len] = '\0';
+        id_scrolls[i].title = (char *)title;
+        id_scrolls[i].real =
+            (char *)find_message((short)(362 + i), &n);
+        id_scrolls[i].id_status = UNIDENTIFIED;
+    }
+}
+
+void
+get_wand_and_ring_materials(void)
+{
+    short i, j;
+    boolean *used = (boolean *)TEMP_BUFFER_ADDR;
+    char **wand_materials = (char **)WAND_MATERIALS_ADDR;
+    char **gems = (char **)GEMS_ADDR;
+
+    memset(used, 0, RINGS);
+    for (i = 0; i < WANDS; i++) {
+        do {
+            j = get_rand(0, WANDS - 1);
+        } while (used[j]);
+        used[j] = 1;
+        id_wands[i].title = wand_materials[j];
+        id_wands[i].id_status = UNIDENTIFIED;
+    }
+
+    memset(used, 0, RINGS);
+    for (i = 0; i < RINGS; i++) {
+        do {
+            j = get_rand(0, RINGS - 1);
+        } while (used[j]);
+        used[j] = 1;
+        id_rings[i].title = gems[j];
+        id_rings[i].id_status = UNIDENTIFIED;
     }
 }
 
 void get_desc(object *obj, char *desc, boolean capitalized)
 {
     u8 *buffer = (u8 *)desc;
+    struct id *id;
     short length;
 
     (void)capitalized;
-    if (obj->what_is == AMULET) {
+    length = 0;
+    buffer[0] = '\0';
+    switch (obj->what_is) {
+    case AMULET:
         get_message(27, buffer, ROGUE_COLUMNS);
-        return;
-    }
-    length = mz_number(buffer, (unsigned short)obj->quantity);
-    
-    if (obj->what_is == GOLD) {
+        break;
+    case GOLD:
+        length = mz_number(buffer, (unsigned short)obj->quantity);
         append_message(buffer, length, 28);
-        return;
-    }
-    
-    if (obj->what_is == FOOD) {
+        break;
+    case FOOD:
+        length = mz_number(buffer, (unsigned short)obj->quantity);
         if (obj->which_kind == RATION) {
             length = append_message(buffer, length, 30);
             append_message(buffer, length, 2);
@@ -143,95 +186,95 @@ void get_desc(object *obj, char *desc, boolean capitalized)
             length = append_message(buffer, length, 31);
             append_message(buffer, length, 333);
         }
-        return;
-    }
-    if (obj->what_is == WEAPON) {
+        break;
+    case WEAPON:
         if (obj->quantity > 1) {
+            length = mz_number(buffer, (unsigned short)obj->quantity);
             length = append_message(buffer, length, 29);
-        } else {
-            length = 0;
-            buffer[0] = '\0';
         }
         length = append_message(buffer, length,
                                 (short)(374 + obj->which_kind));
         if (obj->in_use_flags & BEING_WIELDED) {
             append_message(buffer, length, 35);
         }
-        return;
-    }
-    if (obj->what_is == ARMOR) {
+        break;
+    case ARMOR:
         length = get_message((short)(382 + obj->which_kind), buffer,
                              ROGUE_COLUMNS);
         if (obj->in_use_flags & BEING_WORN) {
             append_message(buffer, length, 36);
         }
-        return;
-    }
-    if (obj->what_is == POTION) {
+        break;
+    case POTION:
         if (obj->quantity > 1) {
+            length = mz_number(buffer, (unsigned short)obj->quantity);
             length = append_message(buffer, length, 32);
-        } else {
-            length = 0;
-            buffer[0] = '\0';
         }
         length = append_message(buffer, length,
                     (short)(((identified_potions &
                               (unsigned short)(1U << obj->which_kind)) != 0
                              ? 348 : 334) + obj->which_kind));
         append_message(buffer, length, 4);
-        return;
-    }
-    if (obj->what_is == SCROL) {
-        if (obj->quantity > 1) length = append_message(buffer, length, 32);
-        else { length = 0; buffer[0] = '\0'; }
-        (void)strcpy((char *)(buffer + length),
-                     (const char *)sc_title[obj->which_kind]);
-        length += (short)strlen((const char *)sc_title[obj->which_kind]);
-        length = append_message(buffer, length, 33);
+        break;
+    case SCROL:
+        if (obj->quantity > 1) {
+            length = mz_number(buffer, (unsigned short)obj->quantity);
+            length = append_message(buffer, length, 32);
+        }
+        if (id_scrolls[obj->which_kind].id_status == IDENTIFIED) {
+            length = append_text(buffer, length,
+                                 id_scrolls[obj->which_kind].real);
+        } else {
+            length = append_text(buffer, length,
+                                 id_scrolls[obj->which_kind].title);
+            length = append_message(buffer, length, 33);
+        }
         append_message(buffer, length, 3);
-        return;
+        break;
+    case WAND:
+        id = &id_wands[obj->which_kind];
+        goto ID_OBJECT;
+    case RING:
+        id = &id_rings[obj->which_kind];
+ID_OBJECT:
+        if (obj->identified || id->id_status == IDENTIFIED) {
+            (void)append_text(buffer, 0, id->real);
+        } else {
+            length = append_text(buffer, 0, id->title);
+            append_message(buffer, length,
+                           (obj->what_is == WAND) ? 5 : 8);
+        }
+        break;
+    default:
+        buffer[0] = '\0';
+        break;
     }
-    if (obj->what_is == WAND) {
-        get_message((short)(389 + obj->which_kind), buffer, ROGUE_COLUMNS);
-        return;
-    }
-    if (obj->what_is == RING) {
-        get_message((short)(399 + obj->which_kind), buffer, ROGUE_COLUMNS);
-        return;
-    }
-    buffer[0] = '\0';
 }
 
 void single_inv(short ichar)
 {
     object *obj;
-    char desc[ROGUE_COLUMNS];
+    char *desc = (char *)TEMP_BUFFER_ADDR;
 
     if (!(obj = get_letter_object(ichar))) return;
     get_desc(obj, desc, 1);
     message((char *)desc, 0);
 }
 
-/* MZ-1500固有の表示・文字列処理。 */
-static short mz_number(u8 *buffer, unsigned short number)
-{
-    u8 digits[6];
-    short count = 0;
-    short i;
-
-    do {
-        digits[count++] = (u8)(DC_0 + number % 10);
-        number /= 10;
-    } while (number && count < (short)sizeof(digits));
-    for (i = 0; i < count; ++i) buffer[i] = digits[count - i - 1];
-    buffer[count] = '\0';
-    return count;
-}
-
+/* MZ-1500固有の処理 */
 static short append_message(u8 *buffer, short length, short msg_id)
 {
     return length + get_message(msg_id, buffer + length,
                                 ROGUE_COLUMNS - length);
+}
+
+static short append_text(u8 *buffer, short length, const char *text)
+{
+    while (*text && length < ROGUE_COLUMNS - 1) {
+        buffer[length++] = (u8)*text++;
+    }
+    buffer[length] = '\0';
+    return length;
 }
 
 static u8 inventory_col(void)
@@ -240,7 +283,7 @@ static u8 inventory_col(void)
     if (rogue.col < 50) return 20;
     return 40;
 }
-
+/* 持ち物表示場所の保存 */
 static void save_inventory_rows(u8 col, u8 rows)
 {
     u8 row;
@@ -253,7 +296,7 @@ static void save_inventory_rows(u8 col, u8 rows)
                40);
     }
 }
-
+/* 持ち物表示場所の復元 */
 static void restore_inventory_rows(u8 col, u8 rows)
 {
     u8 row;

@@ -10,47 +10,55 @@
  *
  */
 #include "rogue.h"
+#include "display.h"
 #include "hit.h"
 #include "level.h"
 #include "message.h"
 #include "monster.h"
 #include "move.h"
+#include "mz_curses.h"
 #include "object.h"
 #include "random.h"
 #include "room.h"
 #include "score.h"
+#include "spechit.h"
 #include "trap.h"
 
-trap traps[MAX_TRAPS];
 boolean trap_door;
 short bear_trap;
-static u8 trap_hidden[MAX_TRAPS];
+extern boolean sustain_strength;
+#define trap_hidden ((u8 *)TRAP_HIDDEN_ADDR)
 
-static short trap_index_at(int row, int col)
+typedef char trap_hidden_size_check[
+    MAX_TRAPS <= TRAP_HIDDEN_SIZE ? 1 : -1];
+
+static void reveal_trap(short i);
+
+int
+trap_at(int row, int col)
 {
     short i;
 
-    for (i = 0; i < MAX_TRAPS && traps[i].trap_type != NO_TRAP; ++i) {
-        if (traps[i].trap_row == row && traps[i].trap_col == col) return i;
+    for (i = 0; ((i < MAX_TRAPS) && (traps[i].trap_type != NO_TRAP)); i++) {
+        if (traps[i].trap_row == row && traps[i].trap_col == col) {
+            return i;
+        }
     }
-    return NO_TRAP;
+    return (NO_TRAP);
 }
 
-int trap_at(int row, int col)
+void
+trap_player(short row, short col)
 {
-    short i = trap_index_at(row, col);
-    return (i == NO_TRAP) ? NO_TRAP : traps[i].trap_type;
-}
-
-void trap_player(short row, short col)
-{
-    short i = trap_index_at(row, col);
     short t;
+    short i;
 
-    if (i == NO_TRAP) return;
+    if ((i = trap_at(row, col)) == NO_TRAP) {
+	    return;
+    }
+
     t = traps[i].trap_type;
-    trap_hidden[i] = 0;
-    DUNGEON(row, col) = TILE_TRAP;
+    reveal_trap(i);
     if (rand_percent(rogue.exp)) {
         message_id(228, 0);
         return;
@@ -72,46 +80,55 @@ void trap_player(short row, short col)
         rogue.hp_current -= (short)get_damage("1d6", 1);
         if (rogue.hp_current < 0) rogue.hp_current = 0;
 #endif
-        if (rogue.str_current >= 3 && rand_percent(40)) {
-            --rogue.str_current;
+        if ((!sustain_strength) && (rogue.str_current >= 3) && rand_percent(40)) {
+            rogue.str_current--;
         }
         print_stats(STAT_HP | STAT_STRENGTH);
-        if (rogue.hp_current == 0) killed_by(0, POISON_DART);
+        if (rogue.hp_current == 0) {
+            killed_by(0, POISON_DART);
+        }
         break;
     case SLEEPING_GAS_TRAP:
         rest(get_rand(2, 5));
         break;
     case RUST_TRAP:
-        if (rogue.armor && !rogue.armor->is_protected && rogue.armor_class > 1) {
-            --rogue.armor_class;
-            --rogue.armor->d_enchant;
-        }
+        rust(0);
         break;
     }
 }
 
-void add_traps(void)
+void
+add_traps(void)
 {
     short i;
     short n;
     short row;
     short col;
 
-    for (i = 0; i < MAX_TRAPS; ++i) {
+    for (i = 0; i < MAX_TRAPS; i++) {
         traps[i].trap_type = NO_TRAP;
         trap_hidden[i] = 0;
     }
     trap_door = 0;
     bear_trap = 0;
-    if (cur_level <= 2) return;
-    if (cur_level <= 7) n = (short)get_rand(0, 2);
-    else if (cur_level <= 11) n = (short)get_rand(1, 2);
-    else if (cur_level <= 16) n = (short)get_rand(2, 3);
-    else if (cur_level <= 21) n = (short)get_rand(2, 4);
-    else if (cur_level <= AMULET_LEVEL + 2) n = (short)get_rand(3, 5);
-    else n = (short)get_rand(5, MAX_TRAPS);
+    if (cur_level <= 2) {
+        return;
+    }
+    if (cur_level <= 7) {
+        n = (short)get_rand(0, 2);
+    } else if (cur_level <= 11) {
+        n = (short)get_rand(1, 2);
+    } else if (cur_level <= 16) {
+        n = (short)get_rand(2, 3);
+    } else if (cur_level <= 21) {
+        n = (short)get_rand(2, 4);
+    } else if (cur_level <= AMULET_LEVEL + 2) {
+        n = (short)get_rand(3, 5);
+    } else {
+        n = (short)get_rand(5, MAX_TRAPS);
+    }
 
-    for (i = 0; i < n; ++i) {
+    for (i = 0; i < n; i++) {
         do {
             gr_row_col(&row, &col, FLOOR);
         } while (object_at(&level_objects, row, col) ||
@@ -123,18 +140,19 @@ void add_traps(void)
     }
 }
 
-void id_trap(void)
+void
+id_trap(void)
 {
     message_id(229, 0);
 }
 
-void show_traps(void)
+void
+show_traps(void)
 {
     short i;
 
-    for (i = 0; i < MAX_TRAPS && traps[i].trap_type != NO_TRAP; ++i) {
-        trap_hidden[i] = 0;
-        DUNGEON(traps[i].trap_row, traps[i].trap_col) = TILE_TRAP;
+    for (i = 0; i < MAX_TRAPS && traps[i].trap_type != NO_TRAP; i++) {
+        reveal_trap(i);
     }
 }
 
@@ -152,11 +170,22 @@ void search(short n, boolean is_auto)
             dc = traps[i].trap_col - rogue.col;
             if (dr >= -1 && dr <= 1 && dc >= -1 && dc <= 1 &&
                 rand_percent(17 + rogue.exp)) {
-                trap_hidden[i] = 0;
-                DUNGEON(traps[i].trap_row, traps[i].trap_col) = TILE_TRAP;
+                reveal_trap(i);
                 message_id((short)(216 + traps[i].trap_type * 2), 0);
             }
         }
         if (!is_auto) reg_move();
     }
+}
+
+/* MZ-1500では文字コードとカラー属性を同時に更新する。 */
+static void reveal_trap(short i)
+{
+    short row = traps[i].trap_row;
+    short col = traps[i].trap_col;
+
+    trap_hidden[i] = 0;
+    DUNGEON(row, col) = TILE_TRAP;
+    colorize_dungeon(row, col);
+    attrset(A_NORMAL);
 }

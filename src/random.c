@@ -8,6 +8,7 @@
  *
  */
 #include "random.h"
+#include "mz_system.h"
 
 static unsigned int rng_state = 0x5a17u;
 
@@ -34,5 +35,5 @@ int rand_percent(int percentage)
 
 int coin_toss(void)
 {
-    return get_rand(0, 1);
+    return fast_rand8() & 0x01;
 }

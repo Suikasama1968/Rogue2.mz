@@ -129,7 +129,7 @@
 #define STEALTH_FACTOR 3
 #define R_TELE_PERCENT 8
 
-#define UNIDENTIFIED ((unsigned short) 00)
+#define UNIDENTIFIED ((unsigned short) 00)	/* MUST BE ZERO! */
 #define IDENTIFIED   ((unsigned short) 01)
 #define CALLED       ((unsigned short) 02)
 
@@ -141,39 +141,57 @@
 
 #define GOLD_PERCENT  46
 
-struct obj {
-    short quantity;
-    short row;
-    short col;
-    unsigned short what_is;
-    unsigned short which_kind;
-    u8 trail_char;
-    u8 picked_up;
-    char ichar;
-    unsigned short in_use_flags;
-    char hit_enchant;
-    char d_enchant;
-    u8 is_cursed;
-    u8 is_protected;
-    short m_hp;
-    u8 m_char;
+struct id
+{
+    short value;
+    char *title;
+    char *real;
+    unsigned short id_status;
+};
+
+struct obj
+{
     unsigned long m_flags;
+//  char *damage;
+    short quantity;
+    char ichar;
     short kill_exp;
-    short m_hit_chance;
+    u8 is_protected;
+    u8 is_cursed;
+    short class;
+    short identified;
+    unsigned short which_kind;
+//  short o_row, o_col, o;
+    short row, col;
+    char d_enchant;
+//  short quiver;
+//  short trow, tcol;
+    char hit_enchant;
+    unsigned short what_is;
+    u8 picked_up;
+    unsigned short in_use_flags;
+    struct obj *next_object;
+
+    u8 trail_char;
     u8 m_damage_n1;
     u8 m_damage_s1;
     u8 m_damage_n2;
     u8 m_damage_s2;
     short m_name_id;
-    struct obj *next_object;
 };
 
 typedef struct obj object;
 
 /* Monster meanings for fields shared with object, as in the original. */
+#define hp_to_kill  quantity
+#define m_char      ichar
 #define first_level  is_protected
 #define last_level   is_cursed
+#define m_hit_chance class
 #define drop_percent which_kind
+#define stationary_damage identified
+#define moves_confused hit_enchant
+#define disguise what_is
 
 #define INIT_HP       12
 
@@ -272,20 +290,20 @@ typedef struct tr trap;
 extern fighter rogue;
 extern u8 *dungeon;
 extern u8 *dungeon_attr;
-extern u8 room_exists[MAXROOMS];
+#define room_exists ((u8 *)ROOM_EXISTS_ADDR)
 extern short cur_level;
+extern short max_level;
 extern short cur_room;
 extern short party_room;
 extern short party_counter;
 extern u8 stairs_row;
 extern u8 stairs_col;
 extern char hunger_str[8];
-extern object level_objects;
-extern object level_monsters;
+#define level_objects (*(object *)LEVEL_OBJECTS_ADDR)
+#define level_monsters (*(object *)LEVEL_MONSTERS_ADDR)
 extern short m_moves;
 extern unsigned long rogue_turns;
-extern boolean game_over;
-extern trap traps[MAX_TRAPS];
+#define traps ((trap *)TRAPS_ADDR)
 
 #define MONSTERS 26
 
@@ -377,7 +395,7 @@ extern trap traps[MAX_TRAPS];
 #define STATUS_ROW_1  (ROGUE_LINES - 2)
 #define STATUS_ROW_2  (ROGUE_LINES - 1)
 
-#define MAX_OBJECTS   24
+#define MAX_OBJECTS   48
 #define MAX_MONSTERS  16
 
 #define TILE_ROCK     DC_SPC
@@ -393,9 +411,20 @@ extern trap traps[MAX_TRAPS];
 #define ATTR_VISIBLE  0x70
 
 #define rooms ((room *)ROOMS_ADDR)
+#define id_scrolls ((struct id *)ID_SCROLLS_ADDR)
+#define id_wands ((struct id *)ID_WANDS_ADDR)
+#define id_rings ((struct id *)ID_RINGS_ADDR)
 
 typedef char rooms_size_check[
     sizeof(room) * MAXROOMS <= ROOMS_SIZE ? 1 : -1];
+typedef char traps_size_check[
+    sizeof(trap) * MAX_TRAPS <= TRAPS_SIZE ? 1 : -1];
+typedef char level_objects_size_check[
+    sizeof(object) <= LEVEL_OBJECTS_SIZE ? 1 : -1];
+typedef char level_monsters_size_check[
+    sizeof(object) <= LEVEL_MONSTERS_SIZE ? 1 : -1];
+typedef char room_exists_size_check[
+    MAXROOMS <= ROOM_EXISTS_SIZE ? 1 : -1];
 
 #define DUNGEON(row, col) \
     dungeon[(unsigned int)(row) * ROGUE_COLUMNS + (col)]

@@ -13,6 +13,7 @@
 #include "message.h"
 #include "move.h"
 #include "mz_curses.h"
+#include "mz_system.h"
 #include "object.h"
 #include "pack.h"
 #include "ring.h"
@@ -56,20 +57,28 @@ take_from_pack(object *obj, object *pack)
     pack->next_object = pack->next_object->next_object;
 }
 
-object *pick_up(int row, int col, short *status)
+object
+*pick_up(int row, int col, short *status)
 {
     object *obj;
     
     obj = object_at(&level_objects, (short)row, (short)col);
-
     *status = 0;
-    if (!obj) return 0;
-    take_from_pack(obj, &level_objects);
+
+    if (!obj) {
+        return 0;
+    }
     if (obj->what_is == GOLD) {
+        take_from_pack(obj, &level_objects);
         rogue.gold += obj->quantity;
         *status = 1;
         return obj;
     }
+    if (pack_count(obj) >= MAX_PACK_COUNT) {
+        message_id(87, 0);
+        return 0;
+    }
+    take_from_pack(obj, &level_objects);
     obj->picked_up = 1;
     obj = add_to_pack(obj, &rogue.pack, 1);
     *status = 1;
@@ -128,23 +137,24 @@ drop(void)
     reg_move();
 }
 
+void
+wait_for_ack(void)
+{
+    while (rgetchar() != ' ') {}
+}
+
 int 
 pack_letter(char *prompt, unsigned short mask)
 {
     object *obj;
     int ch;
-    short msg_id;
+    short msg_id = 0;
 
-    for (obj = rogue.pack.next_object; obj; obj = obj->next_object) {
-        if (obj->what_is & mask) break;
-    }
-    if (!obj) {
+    if (!mask_pack(&rogue.pack, mask)) {
         message_id(93, 0);
         return CANCEL;
     }
-    if (prompt) {
-        message(prompt, 0);
-    } else {
+    if (!prompt) {
         switch (mask) {
         case ALL_OBJECTS:
             msg_id = 90;
@@ -171,12 +181,21 @@ pack_letter(char *prompt, unsigned short mask)
             msg_id = 262;
             break;
         }
-        message_id(msg_id, 0);
     }
-    refresh_dungeon();
-    ch = rgetchar();
-    check_message();
-    return (short)ch;
+    for (;;) {
+        if (prompt) message(prompt, 0);
+        else message_id(msg_id, 0);
+        refresh_dungeon();
+        ch = rgetchar();
+        check_message();
+        if (ch == LIST) {
+            inventory(&rogue.pack, mask);
+            continue;
+        }
+        if (ch == CANCEL) return CANCEL;
+        obj = get_letter_object(ch);
+        if (obj && (obj->what_is & mask)) return (short)ch;
+    }
 }
 
 void
@@ -213,7 +232,7 @@ wear(void)
         return;
     }
     if (!(obj = get_letter_object(ch))) {
-        message_id(98, 0);
+        message_id(91, 0);
         return;
     }
     if (obj->what_is != ARMOR) {
@@ -243,7 +262,9 @@ do_wear(object *obj)
     obj->in_use_flags |= BEING_WORN;
 
     rogue.armor_class = (short)obj->which_kind + 2;
-    if (obj->which_kind == 4 || obj->which_kind == 5) --rogue.armor_class;
+    if (obj->which_kind == 4 || obj->which_kind == 5) {
+        rogue.armor_class--;
+    }
     rogue.armor_class += obj->d_enchant;
 }
 
@@ -263,7 +284,7 @@ wield(void)
         return;
     }
     if (!(obj = get_letter_object(ch))) {
-        message_id(102, 0);
+        message_id(91, 0);
         return;
 
     }
@@ -294,29 +315,56 @@ unwield(object *obj)
     if (obj) {
         obj->in_use_flags &= (~BEING_WIELDED);
     }
-    rogue.weapon = 0;
+    rogue.weapon = (object *)0;
+}
+
+int
+pack_count(object *new_obj)
+{
+    object *obj;
+    short count = 0;
+
+    obj = rogue.pack.next_object;
+
+    while (obj) {
+        if (obj->what_is != WEAPON) {
+            count += obj->quantity;
+        } else if (!new_obj || new_obj->what_is != WEAPON ||
+                   obj->which_kind != new_obj->which_kind) {
+            count++;
+        }
+        obj = obj->next_object;
+    }
+    return count;
+}
+
+boolean
+mask_pack(object *pack, unsigned short mask)
+{
+    while (pack->next_object) {
+        pack = pack->next_object;
+        if (pack->what_is & mask) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int
+has_amulet(void)
+{
+    return (mask_pack(&rogue.pack, AMULET));
 }
 
 static void object_message(object *obj, short msg_id)
 {
-    char desc[ROGUE_COLUMNS];
+    char *desc = (char *)TEMP_BUFFER_ADDR;
     short length;
 
     get_desc(obj, desc, 0);
     for (length = 0; desc[length] != '\0'; ++length) {}
     get_message(msg_id, (u8 *)desc + length, ROGUE_COLUMNS - length);
     message((char *)desc, 0);
-}
-
-int has_amulet(void)
-{
-    object *obj = rogue.pack.next_object;
-
-    while (obj) {
-        if (obj->what_is == AMULET) return 1;
-        obj = obj->next_object;
-    }
-    return 0;
 }
 
 static char next_pack_letter(object *pack)

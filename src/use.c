@@ -9,6 +9,7 @@
  */
 #include "rogue.h"
 #include "display.h"
+#include "invent.h"
 #include "mz_curses.h"
 #include "level.h"
 #include "message.h"
@@ -20,14 +21,18 @@
 #include "room.h"
 #include "use.h"
 
-extern long level_points[];
-
 short halluc = 0;
 short blind = 0;
 short confused = 0;
 short levitate = 0;
 short haste_self = 0;
+boolean see_invisible = 0;
+short extra_hp = 0;
 boolean detect_monster = 0;
+
+extern short bear_trap;
+extern boolean being_held;
+extern boolean sustain_strength;
 
 void
 quaff(void)
@@ -40,7 +45,7 @@ quaff(void)
         return;
     }
     if (!(obj = get_letter_object(ch))) {
-        message_id(232, 0);
+        message_id(91, 0);  /* 232->91 メッセージ統合 */
         return;
     }
     if (obj->what_is != POTION) {
@@ -68,11 +73,16 @@ quaff(void)
         potion_heal(1);
         break;
     case POISON:
-        rogue.str_current -= (short)get_rand(1, 3);
-        if (rogue.str_current < 1) {
-            rogue.str_current = 1;
+        if (!sustain_strength) {
+            rogue.str_current -= (short)get_rand(1, 3);
+            if (rogue.str_current < 1) {
+                rogue.str_current = 1;
+            }
         }
         message_id(238, 0);
+        if (halluc) {
+            unhallucinate();
+        }
         break;
     case RAISE_LEVEL:
         rogue.exp_points = level_points[rogue.exp - 1];
@@ -104,12 +114,24 @@ quaff(void)
         message_id((halluc ? 240 : 241), 0);
         confuse();
         break;
+    case LEVITATION:
+        message_id(242, 0);
+        levitate += get_rand(15, 30);
+        being_held = bear_trap = 0;
+        break;
     case HASTE_SELF:
         message_id(243, 0);
         haste_self += get_rand(11, 21);
         if (!(haste_self % 2)) {
             haste_self++;
         }
+        break;
+    case SEE_INVISIBLE:
+        message_id(244, 0);
+        if (blind) {
+            unblind();
+        }
+        see_invisible = 1;
         break;
     }
     identified_potions |= (unsigned short)(1U << obj->which_kind);
@@ -124,6 +146,7 @@ read_scroll(void)
     int row, col;
     object *obj;
     object *monster;
+    object *scroll;
 
     ch = (short)pack_letter(0, SCROL);
 
@@ -131,13 +154,14 @@ read_scroll(void)
         return;
     }
     if (!(obj = get_letter_object(ch))) {
-        message_id(246, 0);
+        message_id(91, 0);
         return;
     }
     if (obj->what_is != SCROL) {
         message_id(247, 0);
         return;
     }
+    scroll = obj;
     switch (obj->which_kind) {
     case SCARE_MONSTER:
         message_id(248, 0);
@@ -163,9 +187,17 @@ read_scroll(void)
         break;
     case IDENTIFY:
         message_id(253, 0);
+        refresh_dungeon();
+        wait_for_ack();
+        check_message();
+        scroll->identified = 1;
+        id_scrolls[scroll->which_kind].id_status = IDENTIFIED;
+        idntfy();
         break;
     case TELEPORT:
         put_player(cur_room);
+        being_held = 0;
+        bear_trap = 0;
         message_id(221, 0);
         break;
     case SLEEP:
@@ -203,14 +235,17 @@ read_scroll(void)
         message_id(259, 0);
         break;
     }
-    vanish(obj, (short)(obj->which_kind != SLEEP), &rogue.pack);
+    if (id_scrolls[scroll->which_kind].id_status != CALLED) {
+        id_scrolls[scroll->which_kind].id_status = IDENTIFIED;
+    }
+    vanish(scroll, (short)(scroll->which_kind != SLEEP), &rogue.pack);
 }
 
 void
 vanish(object *obj, short rm, object *pack)
 {
     if (obj->quantity > 1) {
-        --obj->quantity;
+        obj->quantity--;
     } else {
         take_from_pack(obj, pack);
         free_object(obj);
@@ -228,17 +263,15 @@ potion_heal(int extra)
 
     rogue.hp_current += rogue.exp;
 
-    if (blind) unblind();
-    if (confused && extra) unconfuse();
-    else if (confused) confused = (confused / 2) + 1;
-
     ratio = rogue.hp_current * 100L / rogue.hp_max;
     
     if (ratio >= 100L) {
         rogue.hp_max += (extra ? 2 : 1);
+        extra_hp += (extra ? 2 : 1);
         rogue.hp_current = rogue.hp_max;
     } else if (ratio >= 90L) {
     	rogue.hp_max += (extra ? 1 : 0);
+        extra_hp += (extra ? 1 : 1);
         rogue.hp_current = rogue.hp_max;
     } else {
         if (ratio < 33L) {
@@ -253,6 +286,57 @@ potion_heal(int extra)
             rogue.hp_current = rogue.hp_max;
         }
     }
+    if (blind) {
+        unblind();
+    }
+    if (confused && extra) {
+        unconfuse();
+    } else if (confused) {
+        confused = (confused / 2) + 1;
+    }
+    if (halluc && extra) {
+        unhallucinate();
+    } else if (halluc) {
+        halluc = (halluc / 2) + 1;
+    }
+}
+
+void
+idntfy(void)
+{
+    short ch;
+    object *obj;
+    u8 *desc = (u8 *)TEMP_BUFFER_ADDR;
+    u8 length;
+    const u8 *prompt = find_message(260, &length);
+
+AGAIN:
+    ch = (short)pack_letter((char *)prompt, ALL_OBJECTS);
+    if (ch == CANCEL) {
+        return;
+    }
+    if (!(obj = get_letter_object(ch))) {
+        message_id(91, 0);
+        check_message();
+        goto AGAIN;
+    }
+    obj->identified = 1;
+    switch (obj->what_is) {
+    case POTION:
+        identified_potions |= (unsigned short)(1U << obj->which_kind);
+        break;
+    case SCROL:
+        id_scrolls[obj->which_kind].id_status = IDENTIFIED;
+        break;
+    case WAND:
+        id_wands[obj->which_kind].id_status = IDENTIFIED;
+        break;
+    case RING:
+        id_rings[obj->which_kind].id_status = IDENTIFIED;
+        break;
+    }
+    get_desc(obj, (char *)desc, 1);
+    message((char *)desc, 0);
 }
 
 void eat(void)
@@ -266,7 +350,7 @@ void eat(void)
         return;
     }
     if (!(obj = get_letter_object(ch))) {
-        message_id(263, 0);
+        message_id(91, 0);
         return;
     }
     if (obj->what_is != FOOD) {
@@ -287,10 +371,24 @@ void eat(void)
     vanish(obj, 1, &rogue.pack);
 }
 
+void
+unhallucinate(void)
+{
+    halluc = 0;
+    relight();
+    message_id(272, 0);
+}
+
 void unblind(void)
 {
     blind = 0;
     message_id(273, 0);
+    relight();
+}
+
+void
+relight(void)
+{
     if (cur_room == PASSAGE) light_passage(rogue.row, rogue.col);
     else light_up_room(cur_room);
 }
@@ -304,9 +402,9 @@ void go_blind(void)
     blind += (short)get_rand(500, 800);
     if (cur_room >= 0 && !(rooms[cur_room].is_room & R_MAZE)) {
         for (row = rooms[cur_room].top_row + 1;
-             row < rooms[cur_room].bottom_row; ++row) {
+             row < rooms[cur_room].bottom_row; row++) {
             for (col = rooms[cur_room].left_col + 1;
-                 col < rooms[cur_room].right_col; ++col) {
+                 col < rooms[cur_room].right_col; col++) {
                 DUNGEON_ATTR(row, col) = ATTR_HIDDEN;
             }
         }

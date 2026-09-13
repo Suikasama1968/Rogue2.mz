@@ -12,7 +12,6 @@ extern void message(char *msg, boolean intrpt);
 extern void check_message(void);
 extern int rgetchar(void);
 extern int get_direction(void);
-extern void sound_bell(void);
 extern void print_stats(int stat_mask);
 extern void message_id(short msg_id, const u8 *text);
 extern const u8 *find_message(short msg_id, u8 *length);

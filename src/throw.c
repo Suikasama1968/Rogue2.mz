@@ -18,9 +18,11 @@
 #include "monster.h"
 #include "move.h"
 #include "mz_curses.h"
+#include "mz_system.h"
 #include "object.h"
 #include "pack.h"
 #include "random.h"
+#include "spechit.h"
 #include "trap.h"
 
 static void consume_thrown_weapon(object *weapon);
@@ -32,16 +34,20 @@ throw(void)
     object *weapon;
     short dir, row, col;
     object *monster;
-    u8 prompt[24];
+    u8 *prompt = (u8 *)TEMP_BUFFER_ADDR;
 
     dir = (short)get_direction();
-    if (dir == CANCEL) return;
-    get_message(210, prompt, sizeof(prompt));
-    if ((wch = (short)pack_letter((char *)prompt, WEAPON)) == CANCEL) return;
+	if (dir == CANCEL) {
+		return;
+	}
+    get_message(210, prompt, 24);
+	if ((wch = (short)pack_letter((char *)prompt, WEAPON)) == CANCEL) {
+		return;
+	}
     check_message();
 
     if (!(weapon = get_letter_object(wch))) {
-        message_id(211, 0);
+        message_id(91, 0);
         return;
     }
     if ((weapon->in_use_flags & BEING_WIELDED) && weapon->is_cursed) {
@@ -50,10 +56,12 @@ throw(void)
     }
     row = rogue.row;
     col = rogue.col;
+	
     monster = get_thrown_at_monster(weapon, dir, &row, &col);
 
     if (monster) {
-        monster->m_flags &= ~ASLEEP;
+        wake_up(monster);
+        check_gold_seeker(monster);
         if (!throw_at_monster(monster, weapon)) {
             flop_weapon(weapon, row, col);
         }
@@ -81,7 +89,7 @@ throw_at_monster(object *monster, object *weapon)
                 weapon->which_kind == SHURIKEN ||
                 weapon->which_kind == DART)) {
         damage = (short)((damage * 3) / 2);
-        hit_chance += hit_chance / 3;
+        hit_chance += (hit_chance / 3);
     }
     if (!rand_percent(hit_chance)) {
         message_id(213, 0);
@@ -101,7 +109,7 @@ get_thrown_at_monster(object *obj, short dir, short *row, short *col)
     u8 tile;
 
     i = 0;
-    do {    // z88dk メモリ削減対策(while->doに変更)
+    do {    /* z88dk メモリ削減対策(while->doに変更) */
         get_dir_rc(dir, row, col, 0);
         if ((*row == old_row && *col == old_col) ||
             !is_passable(*row, *col)) {
@@ -134,7 +142,7 @@ flop_weapon(object *weapon, short row, short col)
     u8 i;
 
     i = 0;
-    do {    // z88dk メモリ削減対策(while->doに変更)
+    do {    /* z88dk メモリ削減対策(while->doに変更) */
         short r = row;
         short c = col;
 
@@ -162,8 +170,8 @@ rand_around(short i, short *r, short *c)
     static char pos[9] = { 8, 7, 1, 3, 4, 5, 2, 6, 0 };
     static short row, col;
     short j;
-    static const char ra[9] = { 1, 1, -1, -1, 0, 1, 0, -1, 0 };
-    static const char ca[9] = { 1, -1, 1, -1, 1, 0, 0, 0, -1 };
+    static const signed char ra[9] = { 1, 1, -1, -1, 0, 1, 0, -1, 0 };
+    static const signed char ca[9] = { 1, -1, 1, -1, 1, 0, 0, 0, -1 };
 
     if (i == 0) {
         short x, y, o, t;
@@ -185,11 +193,12 @@ rand_around(short i, short *r, short *c)
     *c = col + ca[j];
 }
 
+/* MZ-1500固有の処理 */
 static void
 consume_thrown_weapon(object *weapon)
 {
     if (weapon->quantity > 1) {
-        --weapon->quantity;
+        weapon->quantity--;
         return;
     }
     if (weapon == rogue.weapon) unwield(weapon);
