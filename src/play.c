@@ -11,6 +11,7 @@
  */
 #include "rogue.h"
 #include "display.h"
+#include "hit.h"
 #include "invent.h"
 #include "init.h"
 #include "level.h"
@@ -33,6 +34,7 @@ play_level(void)
     int key;
 
     for (;;) {
+        show_hit_message();
         if (trap_door) {
             trap_door = 0;
             return;

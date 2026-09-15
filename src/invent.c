@@ -9,6 +9,7 @@
  */
 #include <string.h>
 #include "rogue.h"
+#include "display.h"
 #include "invent.h"
 #include "message.h"
 #include "mz_curses.h"
@@ -43,7 +44,8 @@ static u8 inventory_col(void);
 static void save_inventory_rows(u8 col, u8 rows);
 static void restore_inventory_rows(u8 col, u8 rows);
 
-void inventory(object *pack, unsigned short mask)
+void
+inventory(object *pack, unsigned short mask)
 {
     object *obj = pack->next_object;
     u8 col;
@@ -98,12 +100,13 @@ void inventory(object *pack, unsigned short mask)
         wait_for_ack();
         restore_inventory_rows(col, (u8)(rows + 1));
         move((u8)rogue.row, (u8)rogue.col);
-        refresh();
+        refresh_dungeon();
         while (obj && !(obj->what_is & mask)) obj = obj->next_object;
     }
 }
 
-void make_scroll_titles(void)
+void
+make_scroll_titles(void)
 {
     short i, j, len;
     short sylls, s;
@@ -132,35 +135,7 @@ void make_scroll_titles(void)
 }
 
 void
-get_wand_and_ring_materials(void)
-{
-    short i, j;
-    boolean *used = (boolean *)TEMP_BUFFER_ADDR;
-    char **wand_materials = (char **)WAND_MATERIALS_ADDR;
-    char **gems = (char **)GEMS_ADDR;
-
-    memset(used, 0, RINGS);
-    for (i = 0; i < WANDS; i++) {
-        do {
-            j = get_rand(0, WANDS - 1);
-        } while (used[j]);
-        used[j] = 1;
-        id_wands[i].title = wand_materials[j];
-        id_wands[i].id_status = UNIDENTIFIED;
-    }
-
-    memset(used, 0, RINGS);
-    for (i = 0; i < RINGS; i++) {
-        do {
-            j = get_rand(0, RINGS - 1);
-        } while (used[j]);
-        used[j] = 1;
-        id_rings[i].title = gems[j];
-        id_rings[i].id_status = UNIDENTIFIED;
-    }
-}
-
-void get_desc(object *obj, char *desc, boolean capitalized)
+get_desc(object *obj, char *desc, boolean capitalized)
 {
     u8 *buffer = (u8 *)desc;
     struct id *id;
@@ -238,7 +213,10 @@ void get_desc(object *obj, char *desc, boolean capitalized)
         id = &id_rings[obj->which_kind];
 ID_OBJECT:
         if (obj->identified || id->id_status == IDENTIFIED) {
-            (void)append_text(buffer, 0, id->real);
+            length = append_text(buffer, 0, id->real);
+            if (obj->what_is == RING) {
+                append_message(buffer, length, 8);
+            }
         } else {
             length = append_text(buffer, 0, id->title);
             append_message(buffer, length,
@@ -251,12 +229,44 @@ ID_OBJECT:
     }
 }
 
-void single_inv(short ichar)
+void
+get_wand_and_ring_materials(void)
+{
+    short i, j;
+    boolean *used = (boolean *)TEMP_BUFFER_ADDR;
+    char **wand_materials = (char **)WAND_MATERIALS_ADDR;
+    char **gems = (char **)GEMS_ADDR;
+
+    memset(used, 0, RINGS);
+    for (i = 0; i < WANDS; i++) {
+        do {
+            j = get_rand(0, WANDS - 1);
+        } while (used[j]);
+        used[j] = 1;
+        id_wands[i].title = wand_materials[j];
+        id_wands[i].id_status = UNIDENTIFIED;
+    }
+
+    memset(used, 0, RINGS);
+    for (i = 0; i < RINGS; i++) {
+        do {
+            j = get_rand(0, RINGS - 1);
+        } while (used[j]);
+        used[j] = 1;
+        id_rings[i].title = gems[j];
+        id_rings[i].id_status = UNIDENTIFIED;
+    }
+}
+
+void
+single_inv(short ichar)
 {
     object *obj;
     char *desc = (char *)TEMP_BUFFER_ADDR;
 
-    if (!(obj = get_letter_object(ichar))) return;
+    if (!(obj = get_letter_object(ichar))) {
+        return;
+    }
     get_desc(obj, desc, 1);
     message((char *)desc, 0);
 }

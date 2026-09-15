@@ -116,6 +116,5 @@ void
 byebye(void)
 {
     message_id(12, 0);
-    refresh();
     md_exit(0);
 }

@@ -153,10 +153,20 @@ steal_item(object *monster)
 	if (rand_percent(15)) {
 		return;
 	}
-	
+
     for (obj = rogue.pack.next_object; obj; obj = obj->next_object) {
-        if (!(obj->in_use_flags & BEING_USED) &&
-            get_rand(1, ++count) == 1) chosen = obj;
+        if (obj->what_is == RING && obj->which_kind == ADORNMENT &&
+            (obj->in_use_flags & ON_EITHER_HAND) && !obj->is_cursed) {
+            un_put_on(obj);
+            chosen = obj;
+            break;
+        }
+    }
+    if (!chosen) {
+        for (obj = rogue.pack.next_object; obj; obj = obj->next_object) {
+            if (!(obj->in_use_flags & BEING_USED) &&
+                get_rand(1, ++count) == 1) chosen = obj;
+        }
     }
     if (chosen) {
         if (chosen->what_is != WEAPON) {

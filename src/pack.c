@@ -185,7 +185,6 @@ pack_letter(char *prompt, unsigned short mask)
     for (;;) {
         if (prompt) message(prompt, 0);
         else message_id(msg_id, 0);
-        refresh_dungeon();
         ch = rgetchar();
         check_message();
         if (ch == LIST) {

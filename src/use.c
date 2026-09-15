@@ -187,7 +187,6 @@ read_scroll(void)
         break;
     case IDENTIFY:
         message_id(253, 0);
-        refresh_dungeon();
         wait_for_ack();
         check_message();
         scroll->identified = 1;
@@ -195,9 +194,7 @@ read_scroll(void)
         idntfy();
         break;
     case TELEPORT:
-        put_player(cur_room);
-        being_held = 0;
-        bear_trap = 0;
+        tele();
         message_id(221, 0);
         break;
     case SLEEP:
@@ -339,7 +336,8 @@ AGAIN:
     message((char *)desc, 0);
 }
 
-void eat(void)
+void
+eat(void)
 {
     short ch;
     short moves;
@@ -369,6 +367,17 @@ void eat(void)
     rogue.moves_left += moves;
     hunger_str[0] = '\0';
     vanish(obj, 1, &rogue.pack);
+}
+
+void
+tele(void)
+{
+    if (cur_room >= 0) {
+        darken_room(cur_room);
+    }
+    put_player((short)get_room_number(rogue.row, rogue.col));
+    being_held = 0;
+    bear_trap = 0;
 }
 
 void

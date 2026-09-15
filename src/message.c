@@ -10,24 +10,50 @@
 #include <string.h>
 
 #include "rogue.h"
+#include "display.h"
 #include "message.h"
 #include "move.h"
 #include "mz_curses.h"
+#include "mz_display.h"
 #include "mz_system.h"
 
 #define message_buffer ((u8 *)MESSAGE_BUFFER_ADDR)
 static boolean msg_cleared = 1;
+static u8 msg_col;
 char hunger_str[8] = "";
 extern short add_strength;
 
 void
 message(char *msg, boolean intrpt)
 {
+    const u8 *p;
+    u8 length;
+    u8 more_col;
+    u8 more_length;
+
     (void)intrpt;
+    attrset(A_NORMAL);
+    if (!msg_cleared) {
+        p = find_message(11, &length);
+        more_length = mz_display_length(p);
+        more_col = msg_col;
+        if (more_col + more_length > V_COLUMN / 2) {
+            more_col = (u8)(V_COLUMN / 2 - more_length);
+        }
+        move(MESSAGE_ROW, more_col);
+        addnstr(p, length);
+        refresh_dungeon();
+        flushinp();
+        (void)rgetchar();
+        flushinp();
+        check_message();
+    }
     move(MESSAGE_ROW, 0);
     addstr((const u8 *)msg);
     clrtoeol();
     msg_cleared = 0;
+    msg_col = mz_display_length((const u8 *)msg);
+    refresh_dungeon();
 }
 
 void
@@ -39,6 +65,7 @@ check_message(void)
     move(MESSAGE_ROW, 0);
     clrtoeol();
     msg_cleared = 1;
+    refresh_dungeon();
 }
 
 int get_direction(void)
@@ -73,6 +100,7 @@ print_stats(int stat_mask)
 
     /* 40列版では2行を一体で整形するため、指定項目を含む全体を再描画する。 */
     (void)stat_mask;
+    attrset(A_NORMAL);
     memset(status1, TILE_ROCK, ROGUE_COLUMNS);
     memset(status2, TILE_ROCK, ROGUE_COLUMNS);
     memset(attr1, ATTR_VISIBLE, ROGUE_COLUMNS);
@@ -132,22 +160,31 @@ short get_message(short msg_id, u8 *buffer, short size)
 
 void message_id(short msg_id, const u8 *text)
 {
+    if (format_message(msg_id, text, message_buffer,
+                       MESSAGE_BUFFER_SIZE) >= 0) {
+        message((char *)message_buffer, 0);
+    }
+}
+
+short
+format_message(short msg_id, const u8 *text, u8 *buffer, short size)
+{
     const u8 *src;
     u8 src_left;
-    u8 length = 0;
+    short length = 0;
 
     src = find_message(msg_id, &src_left);
-    if (!src) return;
-    while (src_left-- && length < MESSAGE_BUFFER_SIZE - 1) {
+    if (!src || size <= 0) return -1;
+    while (src_left-- && length < size - 1) {
         u8 ch = *src++;
         if (ch == MESSAGE_FORMAT_STRING) {
-            while (text && *text && length < MESSAGE_BUFFER_SIZE - 1) {
-                message_buffer[length++] = *text++;
+            while (text && *text && length < size - 1) {
+                buffer[length++] = *text++;
             }
         } else {
-            message_buffer[length++] = ch;
+            buffer[length++] = ch;
         }
     }
-    message_buffer[length] = '\0';
-    message((char *)message_buffer, 0);
+    buffer[length] = '\0';
+    return length;
 }

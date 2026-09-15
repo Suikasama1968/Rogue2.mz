@@ -15,6 +15,7 @@ extern short blind;
 extern short halluc;
 extern boolean detect_monster;
 extern boolean see_invisible;
+extern boolean r_see_invisible;
 
 /*
  * init_color_attr
@@ -130,7 +131,8 @@ void refresh_dungeon(void)
     }
     for (obj = level_monsters.next_object; obj; obj = obj->next_object) {
         if (!blind && (detect_monster || rogue_can_see(obj->row, obj->col)) &&
-            (!(obj->m_flags & INVISIBLE) || detect_monster || see_invisible)) {
+            (!(obj->m_flags & INVISIBLE) || detect_monster || see_invisible ||
+             r_see_invisible)) {
             attrset(COLOR_PAIR((obj->m_flags & IMITATES) ?
                                PAIR_OBJECT : PAIR_MONSTER));
             obj->trail_char = DUNGEON(obj->row, obj->col);
@@ -150,7 +152,8 @@ void refresh_dungeon(void)
     DUNGEON_ATTR(rogue.row, rogue.col) = attr;
     for (obj = level_monsters.next_object; obj; obj = obj->next_object) {
         if (!blind && (detect_monster || rogue_can_see(obj->row, obj->col)) &&
-            (!(obj->m_flags & INVISIBLE) || detect_monster || see_invisible)) {
+            (!(obj->m_flags & INVISIBLE) || detect_monster || see_invisible ||
+             r_see_invisible)) {
             DUNGEON(obj->row, obj->col) = obj->trail_char;
             DUNGEON_ATTR(obj->row, obj->col) = (u8)obj->picked_up;
         }

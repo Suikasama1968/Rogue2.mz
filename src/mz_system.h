@@ -47,7 +47,11 @@ extern "C" {
 // プログラム情報 格納アドレス : 0x0100-0x0xfff
 #define PROGRAM_WORK        0x0100
 
-// 0x0100-0x051fは空き領域
+// 0x0100-0x04cfは空き領域
+
+// 戦闘メッセージ用バッファ
+#define HIT_MESSAGE_ADDR     (PROGRAM_WORK + 0x03d0)
+#define HIT_MESSAGE_SIZE     0x0050
 
 // モンスターデータ
 #define MONSTER_POOL_ADDR   (PROGRAM_WORK + 0x0420)
@@ -149,14 +153,14 @@ extern "C" {
  * 0xeea8-0xeebb  杖材質名ポインタ
  * 0xeebc-0xeed1  指輪宝石名ポインタ
  * 0xeed2-0xeedb  実装済み杖種類
- * 0xeedc-0xeee2  実装済み指輪種類
- * 0xeee3-0xeeff  予約
+ * 0xeedc-0xeee6  実装済み指輪種類
+ * 0xeee7-0xeeff  予約
  * 0xef00-0xf5ef  共用オブジェクトプール
  * 0xf5f0-0xf61f  オブジェクト使用状態
  * 0xf620-0xffff  空き領域
  */
 #define EXTERNAL_DATA_ADDR      0xd000
-#define EXTERNAL_DATA_END       0xeee3
+#define EXTERNAL_DATA_END       0xeee7
 #define EXTERNAL_DATA_SIZE      (EXTERNAL_DATA_END - EXTERNAL_DATA_ADDR)
 
 #define MESG_ADDR               0xd000
@@ -181,7 +185,7 @@ extern "C" {
 #define WAND_KINDS_ADDR         0xeed2
 #define WAND_KINDS_SIZE         0x000a
 #define RING_KINDS_ADDR         0xeedc
-#define RING_KINDS_SIZE         0x0007
+#define RING_KINDS_SIZE         0x000b
 
 // オブジェクトデータ(最大48個)
 #define OBJECT_POOL_ADDR        0xef00

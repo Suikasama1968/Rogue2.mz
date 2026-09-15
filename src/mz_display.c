@@ -10,6 +10,20 @@
 #include "message.h"
 
 /*
+    MZディスプレイコード文字列の表示文字数を返す
+*/
+u8 mz_display_length(const u8 *text)
+{
+    u8 length = 0;
+
+    while (*text) {
+        if (*text != DC_NICOCHAN_0 && *text != DC_NICOCHAN_1) length++;
+        text++;
+    }
+    return length;
+}
+
+/*
     数値を文字列に変換格納する long対応
 */
 u8 mz_number(u8 *dst, unsigned long value)

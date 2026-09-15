@@ -19,9 +19,11 @@
 #include "object.h"
 #include "pack.h"
 #include "random.h"
+#include "use.h"
 
-short r_rings, e_rings, add_strength, ring_exp, regeneration, auto_search;
-boolean sustain_strength, maintain_armor;
+short stealthy, r_rings, add_strength, e_rings, regeneration, ring_exp;
+short auto_search;
+boolean r_teleport, r_see_invisible, sustain_strength, maintain_armor;
 
 void
 put_on_ring(void)
@@ -149,32 +151,54 @@ gr_ring(object *ring, boolean assign_wk)
         ring->which_kind = ring_kinds[get_rand(0, RING_KINDS_SIZE - 1)];
     }
     ring->class = 0;
-    ring->is_cursed = 0;
-    if (ring->which_kind == ADD_STRENGTH ||
-        ring->which_kind == DEXTERITY) {
-        do {
-            ring->class = (short)get_rand(-2, 2);
-        } while (!ring->class);
+
+    switch (ring->which_kind) {
+    /*
+	 * case STEALTH:
+	 * break;
+	 * case SLOW_DIGEST:
+	 * break;
+	 * case REGENERATION:
+	 * break;
+	 * case R_SEE_INVISIBLE:
+	 * break;
+	 * case SUSTAIN_STRENGTH:
+	 * break;
+	 * case R_MAINTAIN_ARMOR:
+	 * break;
+	 * case SEARCHING:
+	 * break;
+	 */
+    case R_TELEPORT:
+        ring->is_cursed = 1;
+        break;
+    case ADD_STRENGTH:
+    case DEXTERITY:
+        while ((ring->class = (short)(get_rand(0, 4) - 2)) == 0);
         ring->is_cursed = (u8)(ring->class < 0);
+        break;
+    case ADORNMENT:
+        ring->is_cursed = coin_toss();
+        break;
     }
 }
 
 void
 inv_rings(void)
 {
-    char *desc = (char *)TEMP_BUFFER_ADDR;
+    char *buf = (char *)TEMP_BUFFER_ADDR;
 
-    if (!r_rings) {
+    if (r_rings == 0) {
         message_id(167, 0);
-        return;
-    }
-    if (rogue.left_ring) {
-        get_desc(rogue.left_ring, desc, 1);
-        message(desc, 0);
-    }
-    if (rogue.right_ring) {
-        get_desc(rogue.right_ring, desc, 1);
-        message(desc, 0);
+    } else {
+        if (rogue.left_ring) {
+            get_desc(rogue.left_ring, buf, 1);
+            message(buf, 0);
+        }
+        if (rogue.right_ring) {
+            get_desc(rogue.right_ring, buf, 1);
+            message(buf, 0);
+        }
     }
 }
 
@@ -184,14 +208,17 @@ ring_stats(boolean pr)
     short i;
     object *ring;
 
+    stealthy = 0;
     r_rings = 0;
     e_rings = 0;
-    add_strength = 0;
-    ring_exp = 0;
-    regeneration = 0;
-    auto_search = 0;
+    r_teleport = 0;
     sustain_strength = 0;
+    add_strength = 0;
+    regeneration = 0;
+    ring_exp = 0;
+    r_see_invisible = 0;
     maintain_armor = 0;
+    auto_search = 0;
 
     for (i = 0; i < 2; i++) {
         if (!(ring = ((i == 0) ? rogue.left_ring : rogue.right_ring))) {
@@ -200,11 +227,17 @@ ring_stats(boolean pr)
         r_rings++;
         e_rings++;
         switch (ring->which_kind) {
-        case SLOW_DIGEST:
-            e_rings -= 2;
+        case STEALTH:
+            stealthy++;
+            break;
+        case R_TELEPORT:
+            r_teleport = 1;
             break;
         case REGENERATION:
             regeneration++;
+            break;
+        case SLOW_DIGEST:
+            e_rings -= 2;
             break;
         case ADD_STRENGTH:
             add_strength += ring->class;
@@ -215,6 +248,11 @@ ring_stats(boolean pr)
         case DEXTERITY:
             ring_exp += ring->class;
             break;
+        case ADORNMENT:
+            break;
+        case R_SEE_INVISIBLE:
+            r_see_invisible = 1;
+            break;
         case MAINTAIN_ARMOR:
             maintain_armor = 1;
             break;
@@ -223,5 +261,8 @@ ring_stats(boolean pr)
             break;
         }
     }
-    if (pr) print_stats(STAT_STRENGTH);
+    if (pr) {
+        print_stats(STAT_STRENGTH);
+        relight();
+    }
 }

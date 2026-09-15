@@ -14,5 +14,6 @@ extern int damage_for_strength(void);
 extern int mon_damage(object *monster, int damage);
 extern int get_hit_chance(object *weapon);
 extern int get_weapon_damage(object *weapon);
+extern void show_hit_message(void);
 
 #endif /* not __HIT_H__ */

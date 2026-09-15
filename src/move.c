@@ -33,6 +33,7 @@ extern short haste_self;
 extern short levitate;
 extern boolean being_held;
 extern short e_rings, regeneration, auto_search;
+extern boolean r_teleport;
 
 int
 one_move_rogue(short dirch, short pickup)
@@ -62,6 +63,10 @@ one_move_rogue(short dirch, short pickup)
         flushinp();
         message_id(67, 0);
         return MOVE_FAILED;
+    }
+    if (r_teleport && rand_percent(R_TELE_PERCENT)) {
+        tele();
+        return STOPPED_ON_SOMETHING;
     }
     if (obj) {
         rogue_hit(obj, 0);

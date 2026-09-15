@@ -27,6 +27,7 @@
 boolean trap_door;
 short bear_trap;
 extern boolean sustain_strength;
+extern short ring_exp;
 #define trap_hidden ((u8 *)TRAP_HIDDEN_ADDR)
 
 typedef char trap_hidden_size_check[
@@ -169,7 +170,7 @@ void search(short n, boolean is_auto)
             dr = traps[i].trap_row - rogue.row;
             dc = traps[i].trap_col - rogue.col;
             if (dr >= -1 && dr <= 1 && dc >= -1 && dc <= 1 &&
-                rand_percent(17 + rogue.exp)) {
+                rand_percent(17 + rogue.exp + ring_exp)) {
                 reveal_trap(i);
                 message_id((short)(216 + traps[i].trap_type * 2), 0);
             }

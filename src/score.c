@@ -13,10 +13,9 @@
 #include "machdep.h"
 #include "message.h"
 #include "mz_curses.h"
+#include "mz_display.h"
 #include "pack.h"
 #include "score.h"
-
-static short mz_display_length(const u8 *text);
 
 void
 killed_by(object *monster, short other)
@@ -61,7 +60,7 @@ killed_by(object *monster, short other)
             for (i = 0; i < suffix_length; ++i) {
                 reason[length + i] = reason[length + i + 1];
             }
-            --suffix_length;
+            suffix_length++;
         }
         length += suffix_length;
     }
@@ -113,17 +112,4 @@ win(void)
     refresh();
     wait_for_ack();
     md_exit(0);
-}
-
-/* MZ-1500固有の処理 */
-static short mz_display_length(const u8 *text)
-{
-    short length = 0;
-
-    /* にこちゃんマークスキップ*/
-    while (*text) {
-        if (*text != MZ_STR_CSET_0 && *text != MZ_STR_CSET_1) length++;
-        text++;
-    }
-    return length;
 }

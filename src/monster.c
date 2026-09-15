@@ -32,6 +32,7 @@ typedef char monster_used_size_check[
 extern boolean detect_monster;
 extern short haste_self;
 extern short blind;
+extern short stealthy;
 
 #define mon_tab ((const object *)MONSTER_TABLE_ADDR)
 typedef char monster_object_size_check[sizeof(object) == 37 ? 1 : -1];
@@ -146,7 +147,10 @@ mv_monster(object *monster, short row, short col)
                    monster->row - rogue.row <= 1 &&
                    monster->col - rogue.col >= -1 &&
                    monster->col - rogue.col <= 1 &&
-                   rand_percent(WAKE_PERCENT)) {
+                   rand_percent((stealthy > 0) ?
+                                (WAKE_PERCENT /
+                                 (STEALTH_FACTOR + stealthy)) :
+                                WAKE_PERCENT)) {
             wake_up(monster);
         }
         return;
@@ -249,6 +253,9 @@ wake_room(short rn, boolean entering, short row, short col)
 
     if (rn < 0 || rn >= MAXROOMS) return;
     wake_percent = (rn == party_room) ? PARTY_WAKE_PERCENT : WAKE_PERCENT;
+    if (stealthy > 0) {
+        wake_percent /= (STEALTH_FACTOR + stealthy);
+    }
     
     monster = level_monsters.next_object;
 
@@ -430,7 +437,7 @@ void remove_monster(object *monster)
         prev = prev->next_object;
     }
     if (prev->next_object == monster) prev->next_object = monster->next_object;
-    for (i = 0; i < MAX_MONSTERS; ++i) {
+    for (i = 0; i < MAX_MONSTERS; i++) {
         if (monster == &monster_pool[i]) {
             monster_used[i] = 0;
             break;

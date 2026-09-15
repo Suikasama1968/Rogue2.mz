@@ -326,7 +326,7 @@ def make_external_image(messages, monsters, load_address, monster_address,
     image.extend(bytes(range(10)))
 
     pad_to(ring_kinds_address, "implemented ring kinds")
-    image.extend(bytes((2, 3, 4, 5, 6, 9, 10)))
+    image.extend(bytes(range(11)))
     return image
 
 

@@ -15,6 +15,7 @@
 #include "level.h"
 #include "message.h"
 #include "monster.h"
+#include "mz_display.h"
 #include "mz_system.h"
 #include "random.h"
 #include "score.h"
@@ -24,8 +25,12 @@ extern short add_strength;
 extern short ring_exp, r_rings;
 extern boolean being_held;
 
+#define hit_message ((u8 *)HIT_MESSAGE_ADDR)
+
 static const u8 weapon_damage_n[WEAPONS] = { 1, 1, 1, 1, 1, 2, 3, 4 };
 static const u8 weapon_damage_s[WEAPONS] = { 1, 1, 2, 3, 4, 3, 4, 5 };
+
+static void append_hit_message(short msg_id, const u8 *text);
 
 static void get_monster_name(object *monster, u8 *name, short size)
 {
@@ -45,7 +50,8 @@ mon_hit(object *monster, char *other, boolean flame)
     get_monster_name(monster, name, 20);
     hit_chance = monster->m_hit_chance - 2 * rogue.exp;
     if (!rand_percent(hit_chance)) {
-        message_id(18, name);
+        append_hit_message(18, name);
+        show_hit_message();
         return;
     }
 
@@ -61,7 +67,8 @@ mon_hit(object *monster, char *other, boolean flame)
         }
         damage -= (damage * rogue.armor_class * 3) / 100;
     }
-    message_id(19, name);
+    append_hit_message(19, name);
+    show_hit_message();
     if (damage > 0) rogue_damage((short)damage, monster);
     if (monster->m_flags & SPECIAL_HIT) special_hit(monster);
 }
@@ -75,11 +82,11 @@ rogue_hit(object *monster, boolean force_hit)
     hit_chance = force_hit ? 100 : get_hit_chance(rogue.weapon);
 
     if (!rand_percent(hit_chance)) {
-        message_id(22, 0);
+        (void)format_message(22, 0, hit_message, HIT_MESSAGE_SIZE);
     } else {
         damage = get_weapon_damage(rogue.weapon);
         if (mon_damage(monster, damage)) { /* still alive? */
-            message_id(23, 0);
+            (void)format_message(23, 0, hit_message, HIT_MESSAGE_SIZE);
         }
     }
     check_gold_seeker(monster);
@@ -204,7 +211,8 @@ mon_damage(object *monster, int damage)
     if (monster->m_flags & HOLDS) being_held = 0;
     remove_monster(monster);
     cough_up(monster);
-    message_id(24, name);
+    append_hit_message(24, name);
+    show_hit_message();
     add_exp(kill_exp, 1);
     return 0;
 }
@@ -278,4 +286,28 @@ get_weapon_damage(object *weapon)
     damage = get_w_damage(weapon) + damage_for_strength();
     damage += ((((rogue.exp + ring_exp) - r_rings) + 1) / 2);
     return damage;
+}
+
+/* MZ-1500固有の処理 */
+void
+show_hit_message(void)
+{
+    if (hit_message[0]) {
+        message((char *)hit_message, 1);
+        hit_message[0] = '\0';
+    }
+}
+
+static void
+append_hit_message(short msg_id, const u8 *text)
+{
+    short length = 0;
+
+    while (hit_message[length]) length++;
+    if (length && length < HIT_MESSAGE_SIZE - 1) {
+        hit_message[length++] = DC_SPC;
+        hit_message[length] = '\0';
+    }
+    (void)format_message(msg_id, text, hit_message + length,
+                         HIT_MESSAGE_SIZE - length);
 }

@@ -274,6 +274,7 @@ extern "C" {
 #define PCG_BLOCK4      0xC8
 #define PCG_IS_BLOCK3(attr) ((attr) & 0x80)
 
+extern u8 mz_display_length(const u8 *);
 extern u8 mz_number(u8 *, unsigned long);
 extern int mz_sprintf(u8 *, short, const long *);
 
