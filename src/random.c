@@ -10,30 +10,63 @@
 #include "random.h"
 #include "mz_system.h"
 
-static unsigned int rng_state = 0x5a17u;
-
-void srrandom(int seed)
+void
+srrandom(int seed)
 {
-    rng_state = (unsigned int)seed;
+    *(u16 *)XSHIFT = seed ? (u16)seed : 0xace1u;
 }
 
-long rrandom(void)
+long
+rrandom(void) __naked
 {
-    rng_state = (unsigned int)(rng_state * 109u + 89u);
-    return (long)rng_state;
+__asm
+// 16-bit xorshift Z80 pseudorandom number generator by John Metcalf
+
+// generates 16-bit pseudorandom numbers with a period of 65535
+// using the xorshift method
+
+// XSHFT ^= XSHFT << 7
+// XSHFT ^= XSHFT >> 9
+// XSHFT ^= XSHFT << 8__asm
+    ld  hl, (XSHIFT)
+
+    ld  a, h
+    rra
+    ld  a, l
+    rra
+    xor h
+    ld  h, a
+
+    ld  a, l
+    rra
+    ld  a, h
+    rra
+    xor l
+    ld  l, a
+
+    xor h
+    ld  h, a
+
+    ld  (XSHIFT), hl
+    ld  de, 0
+    ret
+__endasm;
 }
 
-int get_rand(int low, int high)
+int
+get_rand(int low, int high)
 {
     return low + (int)(rrandom() % (long)(high - low + 1));
 }
 
-int rand_percent(int percentage)
+int
+rand_percent(int percentage)
 {
     return get_rand(1, 100) <= percentage;
 }
 
-int coin_toss(void)
+int
+coin_toss(void)
 {
-    return fast_rand8() & 0x01;
+    return (int)(rrandom() & 0x01L);
 }

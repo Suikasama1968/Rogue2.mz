@@ -21,12 +21,12 @@ extern "C" {
 #define QDIO    0xfa00  // 実行
 
 // QD バッファー
-#define QD_INFO_BLOCK    0x10f0  // インフォメーションブロック
-#define QD_FILE_ATTR     0x10f0  // 属性 
-#define QD_FILE_NAME     0x10f1  // ファイル名 終端 0x0d
-#define QD_FILE_SIZE     0x1102  // ファイルサイズ
-#define QD_DATA_ADDR     0x1104  // データアドレス
-#define QD_EXEC_ADDR     0x1106  // 実行アドレス
+#define QD_INFO_BLOCK   0x10f0  // インフォメーションブロック
+#define QD_FILE_ATTR    0x10f0  // 属性 
+#define QD_FILE_NAME    0x10f1  // ファイル名 終端 0x0d
+#define QD_FILE_SIZE    0x1104  // ファイルサイズ
+#define QD_DATA_ADDR    0x1106  // データアドレス
+#define QD_EXEC_ADDR    0x1108  // 実行アドレス
 
 // Tape バッファー
 #define TAPE_INFO_BLOCK  0x10f0 // インフォメーションブロック

@@ -33,6 +33,9 @@ extern "C" {
 // システム情報
 #define MZ1500          (SYSTEM_WORK + 0x000c)
 
+// 乱数
+#define XSHIFT          (SYSTEM_WORK + 0x000e)
+
 // 割り込み処理情報格納先
 #define VECTOR  	    (SYSTEM_WORK + 0x0010)
 #define TIMER   	    (SYSTEM_WORK + 0x0012)
@@ -49,6 +52,7 @@ extern "C" {
 
 // プログラム情報 格納アドレス : 0x0100-0x0xfff
 #define PROGRAM_WORK        0x0100
+
 
 // 0x0100-0x04cfは空き領域
 
