@@ -1,8 +1,9 @@
 /*
  * mz_io.c
  *
- * Quick Disk読み込み関数 for MZ-1500
+ * Quick Disk / Tape 読み込み関数 for MZ-700/1500
  * Copyright (c) 2026 Suikasama1968
+ * 
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,29 +12,22 @@
 #include "mz_io.h"
 
 /*
-    指定されたファイルをバッファに読み込む
-    filename : 読み込むファイル名(ASCIIコード)
-    buffer : 読み込み先バッファ
-    max_size : バッファの最大サイズ
+    MZ-700/MZ-1500判定　
 */
-u16 QD_File_Read(u8 *filename, u8 *buffer, u16 max_size)
+static u8 Get_System_Info(void) __naked
 {
-    u8 retcode;
-
-RETRY:
-    retcode = QD_open();
-    if (retcode != 0) goto RETRY;
-    retcode = QD_File_Search(filename);
-    if (retcode != 0) goto RETRY;
-    if (*(u16 *)QD_FILE_SIZE > max_size) return ENOSPC;
-    retcode = QD_read(buffer);
-    if (retcode != 0) goto RETRY;
-    return 0;
+__asm
+    ld  hl, 0x0002
+    ld  a, (hl)     // 0x00 : MZ-700, 0xE8 : MZ-1500
+    ld  h, 0x00
+    ld  l, a
+    ret
+__endasm;
 }
 /*
     Quick Diskをオープンする
 */
-u16 QD_open(void) __naked
+static u16 QD_open(void) __naked
 {
 __asm
     xor A       // Aレジスタ0クリア
@@ -58,14 +52,14 @@ QDERROR:
     ret
 __endasm;
 }
+
 /*
     指定されたファイルを検索する
     filename : 検索するファイル名(ASCIIコード)
     戻り値 : 0=成功, 0以外=エラーコード
  */
-u16 QD_File_Search(u8 *filename) __naked
+static u16 QD_File_Search(u8 *filename) __naked
 {
-
 __asm
     ld  hl, 2    
     add hl, sp  // 引数の位置へ移動
@@ -94,7 +88,6 @@ COPYEND:
     ld  (QDPC), hl
     LD  hl, 0040H   //　READサイズ
     LD  (QDPE),hl   // 読み込みサイズセット
-
 
 SEARCHLOOP:
     CALL QDIO                   // QDサブルーチン呼び出し
@@ -131,7 +124,7 @@ __endasm;
     address : 読み込み先バッファ
     戻り値 : 0=成功, 0以外=エラーコード
 */
-u16 QD_read(u8 *address) __z88dk_fastcall __naked
+static u16 QD_read(u8 *address) __z88dk_fastcall __naked
 {
 __asm
     ld  (QDPC), hl
@@ -153,5 +146,69 @@ READNG:
     ret
     
 __endasm;
+}
 
+/*
+    指定されたファイルをバッファに読み込む
+    address : 読み込み先バッファ
+    戻り値 : 0=成功, 0以外=エラーコード
+*/
+static u16 Tape_read_info(void) __naked
+{
+__asm
+    call 0x0027       // インフォメーションブロック
+    ld   h, 0
+    ld   l, a         // 0=成功、1=読込エラー、2=BREAK
+    ret
+__endasm;
+}
+
+static u16 Tape_read_data(void) __naked
+{
+__asm
+    call 0x002a       // リードデータ
+    ld   h, 0
+    ld   l, a
+    ret
+__endasm;
+}
+
+/*
+    指定されたファイルをバッファに読み込む
+    バンクがROMに切り替わっていること
+        filename : 読み込むファイル名(ASCIIコード)
+        buffer : 読み込み先バッファ
+        max_size : バッファの最大サイズ
+*/
+u16 File_Read(u8 *filename, u8 *buffer, u16 max_size)
+{
+    u8 retcode;
+
+    if (Get_System_Info()) {
+RETRY:
+        retcode = QD_open();
+        if (retcode != 0) goto RETRY;
+
+        retcode = QD_File_Search(filename);
+        if (retcode != 0) goto RETRY;
+
+        if (*(u16 *)QD_FILE_SIZE > max_size) return ENOSPC;
+
+        retcode = QD_read(buffer);
+        if (retcode != 0) goto RETRY;
+
+        return 0;
+    }
+
+    retcode = Tape_read_info();
+    if (retcode != 0) return retcode;
+
+    if (*(u16 *)TAPE_FILE_SIZE > max_size) return ENOSPC;
+
+    /*
+     * テープヘッダーのロードアドレスではなく、
+     * File_Read()が指定したバッファへ読み込ませる。
+     */
+    *(u16 *)TAPE_DATA_ADDR = (u16)buffer;
+    return Tape_read_data();
 }

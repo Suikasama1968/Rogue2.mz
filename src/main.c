@@ -53,8 +53,8 @@ main(void)
 int
 read_mesg(char *argv_msgfile)
 {
-    /* 9Z-502Mが見える状態で、仮想VRAMをバッファとしてメッセージを読み込む */
-    if (QD_File_Read((u8 *)argv_msgfile, (u8 *)MESG_LOAD_ADDR,
+    /* ROMが有効な状態で、仮想VRAMをバッファとしてメッセージを読み込む */
+    if (File_Read((u8 *)argv_msgfile, (u8 *)MESG_LOAD_ADDR,
                      MESG_LOAD_SIZE)) return 1;
                      
     /* 圧縮データをメッセージ・モンスターテーブル領域へ展開する */

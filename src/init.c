@@ -31,19 +31,16 @@
 int
 init(void)
 {
-
     int seed;
     WINDOW *main_window;
 
-    /* MZ-1500 initialization */
-    BANK_DRAM_L(); 
-    memset(LOW_RAM_BEGIN, 0x00, LOW_RAM_SIZE);
-  
-    /* Support Only QD,need to add tape support */
     if (read_mesg("MESG")) {
-        BANK_ROM();
         return 1;
     }
+
+    /* init memory */
+    BANK_DRAM_L(); 
+    memset(LOW_RAM_BEGIN, 0x00, LOW_RAM_SIZE);
 
     memset((void *)OBJECT_POOL_ADDR, 0x00,
            OBJECT_POOL_SIZE + OBJECT_USED_SIZE);

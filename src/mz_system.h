@@ -30,6 +30,9 @@ extern "C" {
 #define LOOP_COUNT      (SYSTEM_WORK + 0x000a)
 #define TIME_COUNT      (SYSTEM_WORK + 0x000b)
 
+// システム情報
+#define MZ1500          (SYSTEM_WORK + 0x000c)
+
 // 割り込み処理情報格納先
 #define VECTOR  	    (SYSTEM_WORK + 0x0010)
 #define TIMER   	    (SYSTEM_WORK + 0x0012)

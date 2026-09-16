@@ -21,12 +21,23 @@ extern "C" {
 #define QDIO    0xfa00  // 実行
 
 // QD バッファー
-#define QD_INFO_BLOCK   0x10f0  // インフォメーションブロック
-#define QD_FILE_ATTR    0x10f0  // 属性 
-#define QD_FILE_NAME    0x10f1  // ファイル名 終端 0x0d
-#define QD_FILE_SIZE    0x1104  // ファイルサイズ
-#define QD_DATA_ADDR    0x1106  // データアドレス
-#define QD_EXEC_ADDR    0x1108  // 実行アドレス
+#define QD_INFO_BLOCK    0x10f0  // インフォメーションブロック
+#define QD_FILE_ATTR     0x10f0  // 属性 
+#define QD_FILE_NAME     0x10f1  // ファイル名 終端 0x0d
+#define QD_FILE_SIZE     0x1102  // ファイルサイズ
+#define QD_DATA_ADDR     0x1104  // データアドレス
+#define QD_EXEC_ADDR     0x1106  // 実行アドレス
+
+// Tape バッファー
+#define TAPE_INFO_BLOCK  0x10f0 // インフォメーションブロック
+#define TAPE_FILE_ATTR   0x10f0 // インフォメーションブロック
+#define TAPE_FILE_NAME   0x10f1 // ファイル名 終端 0x0d
+#define TAPE_FILE_SIZE   0x1102 // ファイルサイズ
+#define TAPE_DATA_ADDR   0x1104 // データアドレス
+#define TAPE_EXEC_ADDR   0x1106 // 実行アドレス
+
+#define MON_RDINF        0x0027
+#define MON_RDDAT        0x002a
 
 #define STRING_BUFFER   0x11a3
 
@@ -41,13 +52,8 @@ extern "C" {
 #define EUNFMT  54      // アンフォーマット
 #define EIO     57      // I/Oエラー(ディスク異常)   
 
-// Quick Disk インタフェース モニタ互換
-extern u16 QD_open(void) __naked;
-extern u16 QD_File_Search(u8 *) __naked;
-extern u16 QD_read(u8 *) __z88dk_fastcall;
-
-// Quick Disk インタフェース
-extern u16 QD_File_Read(u8 *, u8 *, u16);
+// I/O インタフェース
+extern u16 File_Read(u8 *, u8 *, u16);
 
 #ifdef __cplusplus
 }

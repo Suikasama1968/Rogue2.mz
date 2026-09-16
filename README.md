@@ -42,6 +42,7 @@ make
 `mz_mesg`はビルド時にMZ-1500の文字コードへ変換され、`ROGUE_MESG.mzt`になります。
 プログラムの`ROGUE_OBJ.mzt`とメッセージの`ROGUE_MESG.mzt`をこの順に連結した
 `ROGUE.mzt`が、QuickDisk用の実行ファイルです。
+動作確認はEmuZ-1500でしております。
 
 ## 権利と配布条件
 
