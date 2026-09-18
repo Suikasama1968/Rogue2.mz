@@ -17,7 +17,6 @@
 #include "level.h"
 #include "message.h"
 #include "move.h"
-#include "mz_curses.h"
 #include "pack.h"
 #include "play.h"
 #include "ring.h"

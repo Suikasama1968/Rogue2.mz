@@ -15,7 +15,6 @@
 #include "invent.h"
 #include "message.h"
 #include "move.h"
-#include "mz_system.h"
 #include "object.h"
 #include "pack.h"
 #include "random.h"
@@ -144,11 +143,9 @@ un_put_on(object *ring)
 void
 gr_ring(object *ring, boolean assign_wk)
 {
-    const u8 *ring_kinds = (const u8 *)RING_KINDS_ADDR;
-
     ring->what_is = RING;
     if (assign_wk) {
-        ring->which_kind = ring_kinds[get_rand(0, RING_KINDS_SIZE - 1)];
+        ring->which_kind = (unsigned short)get_rand(0, RINGS - 1);
     }
     ring->class = 0;
 

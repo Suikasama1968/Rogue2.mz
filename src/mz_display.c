@@ -4,10 +4,10 @@
  * ASCII <-> MZ-700/1500表示変換関数
  * Copyright (c) 2026 Suikasama1968
  */
-#include "mz_common.h"
-#include "mz_display.h"
 #include "rogue.h"
 #include "message.h"
+#include "mz_common.h"
+#include "mz_display.h"
 
 /*
     MZディスプレイコード文字列の表示文字数を返す

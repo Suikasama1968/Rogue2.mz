@@ -27,7 +27,7 @@ __asm
 
 // XSHFT ^= XSHFT << 7
 // XSHFT ^= XSHFT >> 9
-// XSHFT ^= XSHFT << 8__asm
+// XSHFT ^= XSHFT << 8
     ld  hl, (XSHIFT)
 
     ld  a, h

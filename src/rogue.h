@@ -163,10 +163,10 @@ struct obj
     unsigned short which_kind;
 //  short o_row, o_col, o;
     short row, col;
-    char d_enchant;
+    s8 d_enchant;
 //  short quiver;
 //  short trow, tcol;
-    char hit_enchant;
+    s8 hit_enchant;
     unsigned short what_is;
     u8 picked_up;
     unsigned short in_use_flags;
@@ -201,7 +201,6 @@ struct fight {
     short hp_max;
     short str_current;
     short str_max;
-    short armor_class;
     short exp;
     long exp_points;
     short row;

@@ -17,12 +17,12 @@
 #include "machdep.h"
 #include "message.h"
 #include "monster.h"
-#include "mz_curses.h"
-#include "mz_io.h"
-#include "mz_system.h"
 #include "object.h"
 #include "play.h"
 #include "trap.h"
+
+#include "mz_io.h"
+#include "mz_system.h"
 
 int
 main(void)

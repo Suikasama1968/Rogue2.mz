@@ -5,8 +5,6 @@
  * Copyright (c) 2026 Suikasama1968
  * 
  */
-#include <stdio.h>
-#include <stdlib.h>
 
 #include "mz_common.h"
 #include "mz_io.h"

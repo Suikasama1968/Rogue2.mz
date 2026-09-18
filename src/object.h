@@ -22,6 +22,7 @@ extern void gr_scroll(object *obj);
 extern void gr_wand(object *obj);
 extern void gr_weapon(object *obj, int assign_wk);
 extern void gr_armor(object *obj, int assign_wk);
+extern int get_armor_class(object *obj);
 extern void rand_place(object *obj);
 extern void clear_level_objects(void);
 extern void show_objects(void);

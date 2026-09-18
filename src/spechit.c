@@ -16,7 +16,6 @@
 #include "level.h"
 #include "message.h"
 #include "monster.h"
-#include "mz_system.h"
 #include "object.h"
 #include "pack.h"
 #include "random.h"
@@ -70,7 +69,7 @@ special_hit(object *monster)
 void
 rust(object *monster)
 {
-    if ((!rogue.armor) || (rogue.armor_class <= 1) ||
+    if ((!rogue.armor) || (get_armor_class(rogue.armor) <= 1) ||
     (rogue.armor->which_kind == LEATHER)) {
         return;
     }
@@ -81,7 +80,6 @@ rust(object *monster)
         }
     } else {
         rogue.armor->d_enchant--;
-        rogue.armor_class--;
         message_id(202, 0);
         print_stats(STAT_ARMOR);
     }
@@ -98,7 +96,7 @@ freeze(object *monster)
     }
     freeze_percent -= (rogue.str_current + (rogue.str_current / 2));
     freeze_percent -= ((rogue.exp + ring_exp) * 4);
-    freeze_percent -= (rogue.armor_class * 5);
+    freeze_percent -= (get_armor_class(rogue.armor) * 5);
     freeze_percent -= (rogue.hp_max / 3);
     
     if (freeze_percent <= 10) {
@@ -307,7 +305,7 @@ sting(object *monster)
     if (sustain_strength || rogue.str_current <= 3) {
         return;
     }
-    sting_chance += (short)(6 * (6 - rogue.armor_class));
+    sting_chance += (short)(6 * (6 - get_armor_class(rogue.armor)));
     
     if ((rogue.exp + ring_exp) > 8) {
         sting_chance -= (short)(6 * ((rogue.exp + ring_exp) - 8));

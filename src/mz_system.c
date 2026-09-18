@@ -106,8 +106,11 @@ void KEY_Scan(void) __naked
 __asm
     di
 
-    ; Switch to VRAM/I/O bank to access the 8255 at 0xe000
-    call    _BANK_VRAM
+    call    _BANK_VRAM            // VRAM/I/O バンクに切替
+
+    ld  hl, (LOOP_COUNT)          // 乱数のシード用
+    inc hl
+    ld  (LOOP_COUNT), hl
 
     ld      hl, _8255_PORT_A      // HL = 8255 ポートA
     ld      de, KEYDATA+1         // DE = KEYDATA+1

@@ -9,8 +9,6 @@
  *         gain or profit.
  *
  */
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "rogue.h"
@@ -24,7 +22,6 @@
 #include "pack.h"
 #include "random.h"
 #include "ring.h"
-
 #include "mz_curses.h"
 #include "mz_system.h"
 
@@ -81,6 +78,7 @@ player_init(void)
     obj = alloc_object();               /* initial armor */
     obj->what_is = ARMOR;
     obj->which_kind = RINGMAIL;
+    obj->class = RINGMAIL + 2;
     obj->is_protected = 0;
     obj->d_enchant = 1;
     (void)add_to_pack(obj, &rogue.pack, 1);

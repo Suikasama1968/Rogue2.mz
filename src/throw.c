@@ -17,13 +17,12 @@
 #include "message.h"
 #include "monster.h"
 #include "move.h"
-#include "mz_curses.h"
-#include "mz_system.h"
 #include "object.h"
 #include "pack.h"
 #include "random.h"
 #include "spechit.h"
 #include "trap.h"
+#include "mz_curses.h"
 
 static void consume_thrown_weapon(object *weapon);
 

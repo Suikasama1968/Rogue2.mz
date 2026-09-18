@@ -37,7 +37,6 @@ fighter rogue = {
     INIT_HP,                    /* Hp current */
     INIT_HP,                    /* Hp max */
     16, 16,                     /* Str */
-    0,                          /* armor class */
     1, 0,                       /* exp, exp_points */
     0, 0,                       /* row, col */
     DC_AT,                      /* char */
@@ -75,10 +74,8 @@ put_objects(void)
 void
 put_gold(void)
 {
-    int i;
-    int j;
-    short row;
-    short col;
+    int i, j;
+    short row, col;
 
     for (i = 0; i < MAXROOMS; i++) {
         if (!room_exists[i] || !rand_percent(GOLD_PERCENT)) {
@@ -252,7 +249,8 @@ gr_potion(object *obj)
     }
 }
 
-void gr_weapon(object *obj, int assign_wk)
+void 
+gr_weapon(object *obj, int assign_wk)
 {
     short kind;
     short percent;
@@ -261,7 +259,9 @@ void gr_weapon(object *obj, int assign_wk)
     short i;
 
     obj->what_is = WEAPON;
-    if (assign_wk) obj->which_kind = (unsigned short)get_rand(0, WEAPONS - 1);
+    if (assign_wk) {
+        obj->which_kind = (unsigned short)get_rand(0, WEAPONS - 1);
+    }
     kind = (short)obj->which_kind;
     if (kind == DART || kind == ARROW || kind == DAGGER || kind == SHURIKEN) {
         obj->quantity = (short)get_rand(3, 15);
@@ -270,34 +270,48 @@ void gr_weapon(object *obj, int assign_wk)
     }
     obj->hit_enchant = obj->d_enchant = 0;
     obj->is_cursed = 0;
+
     percent = (short)get_rand(1, 96);
     blessing = (short)get_rand(1, 3);
-    if (percent <= 16) increment = 1;
-    else if (percent <= 32) {
+
+    if (percent <= 16) {
+        increment = 1;
+    } else if (percent <= 32) {
         increment = -1;
         obj->is_cursed = 1;
     }
     if (percent <= 32) {
-        for (i = 0; i < blessing; ++i) {
-            if (coin_toss()) obj->hit_enchant += increment;
-            else obj->d_enchant += increment;
+        for (i = 0; i < blessing; i++) {
+            if (coin_toss()) {
+                obj->hit_enchant += increment;
+            }else{
+                 obj->d_enchant += increment;
+            }
         }
     }
 }
 
-void gr_armor(object *obj, int assign_wk)
-{
+void
+gr_armor(object *obj, int assign_wk)
+{				/* by Yasha */
     short percent;
     short blessing;
 
     obj->what_is = ARMOR;
-    if (assign_wk) obj->which_kind = (unsigned short)get_rand(0, 6);
+    if (assign_wk) 		/* by Yasha */
+        obj->which_kind = (unsigned short)get_rand(0, (ARMORS - 1));
+    obj->class = (short)obj->which_kind + 2;
+    if (obj->which_kind == PLATE || obj->which_kind == SPLINT) {
+        obj->class--;
+    }
     obj->quantity = 1;
     obj->is_protected = 0;
     obj->is_cursed = 0;
     obj->d_enchant = 0;
+
     percent = (short)get_rand(1, 100);
     blessing = (short)get_rand(1, 3);
+
     if (percent <= 16) {
         obj->is_cursed = 1;
         obj->d_enchant -= blessing;
@@ -309,10 +323,8 @@ void gr_armor(object *obj, int assign_wk)
 void
 gr_wand(object *obj)
 {
-    const u8 *kinds = (const u8 *)WAND_KINDS_ADDR;
-
     obj->what_is = WAND;
-    obj->which_kind = kinds[get_rand(0, WAND_KINDS_SIZE - 1)];
+    obj->which_kind = (unsigned short)get_rand(0, WANDS - 1);
     if (obj->which_kind == MAGIC_MISSILE) {
         obj->hit_enchant = (char)get_rand(6, 12);
     } else {
@@ -377,6 +389,13 @@ void put_stairs(void)
     stairs_row = (u8)row;
     stairs_col = (u8)col;
     DUNGEON(row, col) = TILE_STAIRS;
+}
+
+int
+get_armor_class(object *obj)
+{
+    if (obj) return obj->class + obj->d_enchant;
+    return 0;
 }
 
 object

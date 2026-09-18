@@ -28,7 +28,6 @@ extern "C" {
 #define KEYDATA_SIZE    0x000a
 
 #define LOOP_COUNT      (SYSTEM_WORK + 0x000a)
-#define TIME_COUNT      (SYSTEM_WORK + 0x000b)
 
 // システム情報
 #define MZ1500          (SYSTEM_WORK + 0x000c)
@@ -157,17 +156,14 @@ extern "C" {
  * 0xeda0-0xedf3  経験値テーブル
  * 0xee00-0xee4f  杖識別テーブル
  * 0xee50-0xeea7  指輪識別テーブル
- * 0xeea8-0xeebb  杖材質名ポインタ
- * 0xeebc-0xeed1  指輪宝石名ポインタ
- * 0xeed2-0xeedb  実装済み杖種類
- * 0xeedc-0xeee6  実装済み指輪種類
- * 0xeee7-0xeeff  予約
+ * 0xeea8-0xeee3  杖材質名ポインタ
+ * 0xeee4-0xeeff  指輪宝石名ポインタ
  * 0xef00-0xf5ef  共用オブジェクトプール
  * 0xf5f0-0xf61f  オブジェクト使用状態
  * 0xf620-0xffff  空き領域
  */
 #define EXTERNAL_DATA_ADDR      0xd000
-#define EXTERNAL_DATA_END       0xeee7
+#define EXTERNAL_DATA_END       0xef00
 #define EXTERNAL_DATA_SIZE      (EXTERNAL_DATA_END - EXTERNAL_DATA_ADDR)
 
 #define MESG_ADDR               0xd000
@@ -186,13 +182,9 @@ extern "C" {
 #define ID_RINGS_ADDR           0xee50
 #define ID_RINGS_SIZE           0x0058
 #define WAND_MATERIALS_ADDR     0xeea8
-#define WAND_MATERIALS_SIZE     0x0014
-#define GEMS_ADDR               0xeebc
-#define GEMS_SIZE               0x0016
-#define WAND_KINDS_ADDR         0xeed2
-#define WAND_KINDS_SIZE         0x000a
-#define RING_KINDS_ADDR         0xeedc
-#define RING_KINDS_SIZE         0x000b
+#define WAND_MATERIALS_SIZE     0x003c
+#define GEMS_ADDR               0xeee4
+#define GEMS_SIZE               0x001c
 
 // オブジェクトデータ(最大48個)
 #define OBJECT_POOL_ADDR        0xef00

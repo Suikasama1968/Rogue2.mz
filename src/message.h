@@ -5,7 +5,7 @@
 #define MESSAGE_FORMAT_DECIMAL 0xfd
 #define MESSAGE_FORMAT_UNSIGNED 0xfc
 #define MESSAGE_FORMAT_LONG 0xfb
-#define MESSAGE_ENTRY_SIZE    5
+#define MESSAGE_ENTRY_SIZE    4
 #define MESSAGE_END_ID        0xffff
 
 extern void message(char *msg, boolean intrpt);

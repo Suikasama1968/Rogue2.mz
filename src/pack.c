@@ -12,12 +12,12 @@
 #include "invent.h"
 #include "message.h"
 #include "move.h"
-#include "mz_curses.h"
-#include "mz_system.h"
 #include "object.h"
 #include "pack.h"
 #include "ring.h"
 #include "trap.h"
+#include "mz_curses.h"
+#include "mz_system.h"
 
 static void object_message(object *obj, short msg_id);
 static char next_pack_letter(object *pack);
@@ -251,7 +251,6 @@ unwear(object *obj)
         obj->in_use_flags &= (~BEING_WORN);
     }   
     rogue.armor = 0;
-    rogue.armor_class = 0;
 }
 
 void
@@ -259,12 +258,7 @@ do_wear(object *obj)
 {
     rogue.armor = obj;
     obj->in_use_flags |= BEING_WORN;
-
-    rogue.armor_class = (short)obj->which_kind + 2;
-    if (obj->which_kind == 4 || obj->which_kind == 5) {
-        rogue.armor_class--;
-    }
-    rogue.armor_class += obj->d_enchant;
+    obj->identified = 1;
 }
 
 void

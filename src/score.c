@@ -12,10 +12,9 @@
 #include "rogue.h"
 #include "machdep.h"
 #include "message.h"
-#include "mz_curses.h"
-#include "mz_display.h"
 #include "pack.h"
 #include "score.h"
+#include "mz_curses.h"
 
 void
 killed_by(object *monster, short other)

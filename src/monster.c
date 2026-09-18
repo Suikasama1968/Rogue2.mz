@@ -81,7 +81,7 @@ void
 mv_mons(void)
 {
     object *monster, *next_monster;
-    short moves;
+    boolean flew;
 
     if (haste_self % 2) {
         return;
@@ -98,11 +98,26 @@ mv_mons(void)
                 continue;
             }
         }
-        moves = (monster->m_flags & FLIES) ? 2 : 1;
-        if (monster->m_flags & HASTED) ++moves;
-        while (moves-- > 0) {
+        if (monster->m_flags & HASTED) {
             mv_monster(monster, rogue.row, rogue.col);
-            if (monster_at(monster->row, monster->col) != monster) break;
+            if (monster_at(monster->row, monster->col) != monster) {
+                monster = next_monster;
+                continue;
+            }
+        }
+        flew = 0;
+        if ((monster->m_flags & FLIES) &&
+            !(monster->m_flags & NAPPING) &&
+            !mon_can_go(monster, rogue.row, rogue.col)) {
+            flew = 1;
+            mv_monster(monster, rogue.row, rogue.col);
+            if (monster_at(monster->row, monster->col) != monster) {
+                monster = next_monster;
+                continue;
+            }
+        }
+        if (!(flew && mon_can_go(monster, rogue.row, rogue.col))) {
+            mv_monster(monster, rogue.row, rogue.col);
         }
         monster = next_monster;
     }

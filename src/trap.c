@@ -16,13 +16,13 @@
 #include "message.h"
 #include "monster.h"
 #include "move.h"
-#include "mz_curses.h"
 #include "object.h"
 #include "random.h"
 #include "room.h"
 #include "score.h"
 #include "spechit.h"
 #include "trap.h"
+#include "mz_curses.h"
 
 boolean trap_door;
 short bear_trap;

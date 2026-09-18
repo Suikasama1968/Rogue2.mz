@@ -15,11 +15,11 @@
 #include "level.h"
 #include "message.h"
 #include "monster.h"
-#include "mz_display.h"
-#include "mz_system.h"
+#include "object.h"
 #include "random.h"
 #include "score.h"
 #include "spechit.h"
+#include "mz_system.h"
 
 extern short add_strength;
 extern short ring_exp, r_rings;
@@ -65,7 +65,7 @@ mon_hit(object *monster, char *other, boolean flame)
         for (i = 0; i < monster->m_damage_n2; ++i) {
             damage += get_rand(1, monster->m_damage_s2);
         }
-        damage -= (damage * rogue.armor_class * 3) / 100;
+        damage -= (damage * get_armor_class(rogue.armor) * 3) / 100;
     }
     append_hit_message(19, name);
     show_hit_message();

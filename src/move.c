@@ -8,13 +8,12 @@
  *
  */
 #include "rogue.h"
+#include "display.h"
 #include "hit.h"
 #include "invent.h"
 #include "message.h"
 #include "monster.h"
 #include "move.h"
-#include "mz_curses.h"
-#include "mz_system.h"
 #include "object.h"
 #include "pack.h"
 #include "random.h"
@@ -22,6 +21,8 @@
 #include "score.h"
 #include "trap.h"
 #include "use.h"
+#include "mz_curses.h"
+#include "mz_system.h"
 
 short m_moves;
 unsigned long rogue_turns;
@@ -38,35 +39,42 @@ extern boolean r_teleport;
 int
 one_move_rogue(short dirch, short pickup)
 {
-    short row = rogue.row;
-    short col = rogue.col;
+    short row, col;
+    short r, c;
     short status;
     short length;
     object *obj;
     char *desc = (char *)TEMP_BUFFER_ADDR;
 
+    r = rogue.row;
+    c = rogue.col;
+
     if (confused) {
-        static const char dirs[] = "jklhyubn";
-        dirch = dirs[get_rand(0, 7)];
+        dirch = gr_dir();
     }
+    get_dir_rc(dirch, &r, &c, 1);
+    row = r;
+    col = c;
 
-    if (bear_trap) {
-        reg_move();
+    if (!can_move(rogue.row, rogue.col, row, col)) {
         return MOVE_FAILED;
     }
-
-    get_dir_rc(dirch, &row, &col, 1);
-
-    if (!can_move(rogue.row, rogue.col, row, col)) return MOVE_FAILED;
     obj = monster_at(row, col);
-    if (being_held && !obj) {
-        flushinp();
-        message_id(67, 0);
-        return MOVE_FAILED;
+    if ((being_held || bear_trap) && !obj) {
+        if (being_held) {
+            flushinp();
+            message_id(67, 0);
+        } else {
+            message_id(68, 0);
+            reg_move();
+        }
+        return (MOVE_FAILED);
     }
-    if (r_teleport && rand_percent(R_TELE_PERCENT)) {
-        tele();
-        return STOPPED_ON_SOMETHING;
+    if (r_teleport){
+        if (rand_percent(R_TELE_PERCENT)) {
+            tele();
+            return STOPPED_ON_SOMETHING;
+        }
     }
     if (obj) {
         rogue_hit(obj, 0);
@@ -77,25 +85,26 @@ one_move_rogue(short dirch, short pickup)
         if (cur_room == PASSAGE) {
             cur_room = (short)get_room_number(row, col);
             if (cur_room >= 0 && (rooms[cur_room].is_room & R_MAZE)) {
-                if (!blind) light_passage(row, col);
+                light_passage(row, col);
                 cur_room = PASSAGE;
             } else {
-                if (!blind) light_up_room(cur_room);
+                light_up_room(cur_room);
                 wake_room(cur_room, 1, row, col);
             }
         } else {
-            if (!blind) light_passage(row, col);
+            light_passage(row, col);
         }
     } else if (DUNGEON(rogue.row, rogue.col) == TILE_DOOR &&
                DUNGEON(row, col) == TILE_TUNNEL) {
-        if (!blind) light_passage(row, col);
+        light_passage(row, col);
         wake_room(cur_room, 0, rogue.row, rogue.col);
         darken_room(cur_room);
         cur_room = PASSAGE;
     } else if (DUNGEON(row, col) == TILE_TUNNEL) {
-        if (!blind) light_passage(row, col);
+        light_passage(row, col);
     }
 
+    colorize_dungeon(rogue.row, rogue.col);
     rogue.row = row;
     rogue.col = col;
     if (!levitate && trap_at(row, col) != NO_TRAP) trap_player(row, col);
@@ -232,7 +241,8 @@ reg_move(void)
 {
     boolean fainted = check_hunger(0);
 
-    ++rogue_turns;
+    rogue_turns++;
+    
     mv_mons();
 
     if (++m_moves >= 120) {
@@ -285,6 +295,11 @@ rest(int count)
     for (i = 0; i < count; i++) {
         (void) reg_move();
     }
+}
+int
+gr_dir(void)
+{
+    return (*("jklhyubn" + get_rand(1, 8) - 1));
 }
 
 void

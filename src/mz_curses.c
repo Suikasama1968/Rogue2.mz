@@ -7,9 +7,7 @@
  * Copyright (c) 2026 Suikasama1968
  */
 
-#include <stdio.h>
 #include <string.h>
-#include <stdlib.h>
 #include "rogue.h"
 #include "move.h"
 #include "mz_curses.h"

@@ -12,11 +12,11 @@
 #include "display.h"
 #include "invent.h"
 #include "message.h"
-#include "mz_curses.h"
-#include "mz_system.h"
 #include "object.h"
 #include "pack.h"
 #include "random.h"
+#include "mz_curses.h"
+#include "mz_system.h"
 
 #define INVENTORY_PAGE_ROWS 8
 #define INVENTORY_SAVE_ROWS (INVENTORY_PAGE_ROWS + 1)
@@ -237,20 +237,20 @@ get_wand_and_ring_materials(void)
     char **wand_materials = (char **)WAND_MATERIALS_ADDR;
     char **gems = (char **)GEMS_ADDR;
 
-    memset(used, 0, RINGS);
+    memset(used, 0, WAND_MATERIALS);
     for (i = 0; i < WANDS; i++) {
         do {
-            j = get_rand(0, WANDS - 1);
+            j = get_rand(0, WAND_MATERIALS - 1);
         } while (used[j]);
         used[j] = 1;
         id_wands[i].title = wand_materials[j];
         id_wands[i].id_status = UNIDENTIFIED;
     }
 
-    memset(used, 0, RINGS);
+    memset(used, 0, GEMS);
     for (i = 0; i < RINGS; i++) {
         do {
-            j = get_rand(0, RINGS - 1);
+            j = get_rand(0, GEMS - 1);
         } while (used[j]);
         used[j] = 1;
         id_rings[i].title = gems[j];

@@ -197,20 +197,20 @@ def make_message_image(messages):
     data = []
     entries = []
     stored = {}
-    data_offset = (len(messages) + 1) * 5
+    data_offset = (len(messages) + 1) * 4
     for msg_id, encoded in messages:
         key = bytes(encoded)
         if key not in stored:
             stored[key] = data_offset + len(data)
             data.extend(encoded)
             data.append(0)
-        entries.append((msg_id, stored[key], len(encoded)))
+        entries.append((msg_id, stored[key]))
     image = bytearray()
-    for msg_id, offset, length in entries:
-        image.extend(struct.pack("<HHB", msg_id, offset, length))
-    image.extend(struct.pack("<HHB", 0xffff, 0, 0))
+    for msg_id, offset in entries:
+        image.extend(struct.pack("<HH", msg_id, offset))
+    image.extend(struct.pack("<HH", 0xffff, 0))
     image.extend(data)
-    return image, {msg_id: offset for msg_id, offset, _ in entries}
+    return image, {msg_id: offset for msg_id, offset in entries}
 
 
 def parse_damage(value, line_no):
@@ -273,12 +273,20 @@ def parse_monsters(path, display_values):
     return bytearray(b"".join(records))
 
 
-def make_external_image(messages, monsters, load_address, monster_address,
-                        level_points_address, id_wands_address,
+def make_external_image(messages, appearance_messages, monsters,
+                        load_address, monster_address, level_points_address, id_wands_address,
                         id_rings_address, wand_materials_address,
-                        gems_address, wand_kinds_address,
-                        ring_kinds_address):
+                        gems_address):
     image, message_offsets = make_message_image(messages)
+    appearance_offsets = {}
+    stored_appearances = {}
+    for msg_id, encoded in appearance_messages:
+        key = bytes(encoded)
+        if key not in stored_appearances:
+            stored_appearances[key] = load_address + len(image)
+            image.extend(encoded)
+            image.append(0)
+        appearance_offsets[msg_id] = stored_appearances[key]
 
     def message_pointer(msg_id, required=True):
         if msg_id in message_offsets:
@@ -286,6 +294,9 @@ def make_external_image(messages, monsters, load_address, monster_address,
         if required:
             raise ValueError(f"message {msg_id} is required by external tables")
         return 0
+
+    def appearance_pointer(msg_id):
+        return appearance_offsets[msg_id]
 
     def pad_to(address, description):
         offset = address - load_address
@@ -315,18 +326,13 @@ def make_external_image(messages, monsters, load_address, monster_address,
                                  message_pointer(399 + i, False), 0))
 
     pad_to(wand_materials_address, "wand material pointers")
-    for msg_id in range(410, 420):
-        image.extend(struct.pack("<H", message_pointer(msg_id)))
+    for msg_id in range(410, 440):
+        image.extend(struct.pack("<H", appearance_pointer(msg_id)))
 
     pad_to(gems_address, "ring gem pointers")
-    for msg_id in range(440, 451):
-        image.extend(struct.pack("<H", message_pointer(msg_id)))
+    for msg_id in range(440, 454):
+        image.extend(struct.pack("<H", appearance_pointer(msg_id)))
 
-    pad_to(wand_kinds_address, "implemented wand kinds")
-    image.extend(bytes(range(10)))
-
-    pad_to(ring_kinds_address, "implemented ring kinds")
-    image.extend(bytes(range(11)))
     return image
 
 
@@ -399,11 +405,7 @@ def main():
     parser.add_argument("--wand-materials-address",
                         type=lambda value: int(value, 0), default=0xeea8)
     parser.add_argument("--gems-address",
-                        type=lambda value: int(value, 0), default=0xeebc)
-    parser.add_argument("--wand-kinds-address",
-                        type=lambda value: int(value, 0), default=0xeed2)
-    parser.add_argument("--ring-kinds-address",
-                        type=lambda value: int(value, 0), default=0xeedc)
+                        type=lambda value: int(value, 0), default=0xeee4)
     parser.add_argument("--data-limit-address",
                         type=lambda value: int(value, 0), default=0xef00)
     args = parser.parse_args()
@@ -412,16 +414,19 @@ def main():
         selected -= {int(value) for value in args.exclude_ids.split(",")}
     values = read_defines(args.display)
     source = parse_messages(args.input, selected)
-    encoded = [(msg_id, encode_message(text, values, line_no))
-               for msg_id, text, line_no in source]
+    all_encoded = [(msg_id, encode_message(text, values, line_no))
+                   for msg_id, text, line_no in source]
+    appearance_messages = [(msg_id, data) for msg_id, data in all_encoded
+                           if 410 <= msg_id <= 453]
+    encoded = [(msg_id, data) for msg_id, data in all_encoded
+               if not 410 <= msg_id <= 453]
     monsters = parse_monsters(args.monster, values)
-    image = make_external_image(encoded, monsters, args.data_address,
-                                args.monster_address,
+    image = make_external_image(encoded, appearance_messages, monsters,
+                                args.data_address, args.monster_address,
                                 args.level_points_address,
                                 args.id_wands_address, args.id_rings_address,
                                 args.wand_materials_address,
-                                args.gems_address, args.wand_kinds_address,
-                                args.ring_kinds_address)
+                                args.gems_address)
     image_end = args.data_address + len(image)
     if image_end > args.data_limit_address:
         raise ValueError(
@@ -430,7 +435,7 @@ def main():
     image_size, compressed_size = write_compressed_mzt(
         args.output, image, args.mzt_name, args.load_address,
         args.exec_address, args.zx0, args.max_compressed_size)
-    for msg_id, data in encoded:
+    for msg_id, data in all_encoded:
         print(f"message {msg_id}: {len(data)} bytes")
     print(f"MZT: {args.output} compressed={compressed_size} bytes "
           f"expanded={image_size} bytes load=0x{args.load_address:04x} "

@@ -9,13 +9,15 @@
  */
 #include "rogue.h"
 #include "display.h"
-#include "mz_curses.h"
 #include "move.h"
 #include "object.h"
 #include "random.h"
 #include "room.h"
+#include "mz_curses.h"
 
 #define rooms_visited ((u8 *)ROOMS_VISITED_ADDR)
+
+extern short blind;
 
 typedef char rooms_visited_size_check[
     MAXROOMS <= ROOMS_VISITED_SIZE ? 1 : -1];
@@ -24,7 +26,7 @@ void light_up_room(int rn)
 {
     short i, j;
 
-    if (rn < 0 || rn >= MAXROOMS || !room_exists[rn] ||
+    if (blind || rn < 0 || rn >= MAXROOMS || !room_exists[rn] ||
         (rooms[rn].is_room & R_MAZE)) return;
     for (i = rooms[rn].top_row; i <= rooms[rn].bottom_row; i++) {
         for (j = rooms[rn].left_col; j <= rooms[rn].right_col; j++) {
@@ -38,6 +40,7 @@ void light_passage(int row, int col)
 {
     short i, j, i_end, j_end;
 
+    if (blind) return;
     i_end = (row < MAX_ROW) ? 1 : 0;
     j_end = (col < (ROGUE_COLUMNS - 1)) ? 1 : 0;
 
@@ -59,8 +62,8 @@ void darken_room(short rn)
         (rooms[rn].is_room & R_MAZE)) return;
     for (i = rooms[rn].top_row + 1; i < rooms[rn].bottom_row; i++) {
         for (j = rooms[rn].left_col + 1; j < rooms[rn].right_col; j++) {
-            if (DUNGEON(i, j) != TILE_STAIRS &&
-                !object_at(&level_objects, (short)i, (short)j)) {
+            if (blind || (DUNGEON(i, j) != TILE_STAIRS &&
+                !object_at(&level_objects, (short)i, (short)j))) {
                 DUNGEON_ATTR(i, j) = ATTR_HIDDEN;
             }
         }

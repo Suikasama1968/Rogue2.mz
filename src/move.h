@@ -8,6 +8,7 @@ extern char is_direction(int c);
 extern boolean check_hunger(boolean messages_only);
 extern boolean reg_move(void);
 extern void rest(int count);
+extern int gr_dir(void);
 extern void heal(void);
 
 #endif /* not __MOVE_H__ */

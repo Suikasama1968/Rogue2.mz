@@ -254,7 +254,7 @@ clear_level(void)
     see_invisible = 0;
     memset(dungeon, TILE_ROCK, ROGUE_COLUMNS * STATUS_ROW_1);
     memset(dungeon_attr, ATTR_HIDDEN, ROGUE_COLUMNS * STATUS_ROW_1);
-    for (i = 0; i < MAXROOMS; ++i) {
+    for (i = 0; i < MAXROOMS; i++) {
         room_exists[i] = 0;
         rooms[i].is_room = R_NOTHING;
         for (j = 0; j < 4; j++) {

@@ -13,6 +13,7 @@
 #include "display.h"
 #include "message.h"
 #include "move.h"
+#include "object.h"
 #include "mz_curses.h"
 #include "mz_display.h"
 #include "mz_system.h"
@@ -112,7 +113,7 @@ print_stats(int stat_mask)
     mz_sprintf(line1, 527, values);
     values[0] = rogue.str_current + add_strength;
     values[1] = rogue.str_max;
-    values[2] = rogue.armor_class;
+    values[2] = get_armor_class(rogue.armor);
     values[3] = rogue.exp;
     values[4] = rogue.exp_points;
     mz_sprintf(line2, 528, values);
@@ -126,8 +127,10 @@ const u8 *find_message(short msg_id, u8 *length)
 {
     const u8 *base = (const u8 *)MESG_ADDR;
     const u8 *entry = base;
+    const u8 *src;
     unsigned short offset;
     unsigned short id;
+    u8 n;
 
     while (1) {
         id = (unsigned short)entry[0] |
@@ -136,8 +139,11 @@ const u8 *find_message(short msg_id, u8 *length)
         if (id == (unsigned short)msg_id) {
             offset = (unsigned short)entry[2] |
                      ((unsigned short)entry[3] << 8);
-            *length = entry[4];
-            return base + offset;
+            src = base + offset;
+            n = 0;
+            while (src[n]) n++;
+            *length = n;
+            return src;
         }
         entry += MESSAGE_ENTRY_SIZE;
     }

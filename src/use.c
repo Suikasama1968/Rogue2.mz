@@ -10,7 +10,6 @@
 #include "rogue.h"
 #include "display.h"
 #include "invent.h"
-#include "mz_curses.h"
 #include "level.h"
 #include "message.h"
 #include "monster.h"
@@ -20,6 +19,7 @@
 #include "random.h"
 #include "room.h"
 #include "use.h"
+#include "mz_curses.h"
 
 short halluc = 0;
 short blind = 0;
@@ -180,7 +180,6 @@ read_scroll(void)
         break;
     case ENCH_ARMOR:
         if (rogue.armor) {
-            ++rogue.armor_class;
             ++rogue.armor->d_enchant;
             message_id(251, 0);
         } else message_id(252, 0);
@@ -404,20 +403,9 @@ relight(void)
 
 void go_blind(void)
 {
-    short row;
-    short col;
-
     if (!blind) message_id(274, 0);
     blind += (short)get_rand(500, 800);
-    if (cur_room >= 0 && !(rooms[cur_room].is_room & R_MAZE)) {
-        for (row = rooms[cur_room].top_row + 1;
-             row < rooms[cur_room].bottom_row; row++) {
-            for (col = rooms[cur_room].left_col + 1;
-                 col < rooms[cur_room].right_col; col++) {
-                DUNGEON_ATTR(row, col) = ATTR_HIDDEN;
-            }
-        }
-    }
+    if (cur_room >= 0) darken_room(cur_room);
 }
 
 void

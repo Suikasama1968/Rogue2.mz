@@ -35,7 +35,11 @@
 int
 md_gseed(void)
 {
-    return (int)fast_rand8();
+    int seed;
+
+    seed = *(u16 *)LOOP_COUNT;
+    seed ^= (u16)fast_rand8() << 8;
+    return (seed);
 }
 
 /* md_exit():
