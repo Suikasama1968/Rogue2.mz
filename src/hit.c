@@ -48,7 +48,8 @@ mon_hit(object *monster, char *other, boolean flame)
     (void)flame;
 
     get_monster_name(monster, name, 20);
-    hit_chance = monster->m_hit_chance - 2 * rogue.exp;
+    hit_chance = monster->m_hit_chance;
+    hit_chance -= (((2 * rogue.exp) + (2 * ring_exp)) - r_rings);
     if (!rand_percent(hit_chance)) {
         append_hit_message(18, name);
         show_hit_message();

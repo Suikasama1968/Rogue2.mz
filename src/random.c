@@ -38,12 +38,17 @@ __asm
     ld  h, a
 
     ld  a, l
-    rra
+    and 0x01
+    rrca
+    xor l
+    ld  l, a
+
     ld  a, h
     rra
     xor l
     ld  l, a
 
+    ld  a, l
     xor h
     ld  h, a
 
