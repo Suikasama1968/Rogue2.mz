@@ -1,5 +1,21 @@
+/*
+ * rogue.h
+ *
+ * This source herein may be modified and/or distributed by anybody who
+ * so desires, with the following restrictions:
+ *    1.)  This notice shall not be removed.
+ *    2.)  Credit shall not be taken for the creation of this source.
+ *    3.)  This code is not to be traded, sold, or used for personal
+ *         gain or profit.
+ *
+ */
+
 #if !defined( __ROGUE_H__ )
 #define __ROGUE_H__
+
+#if defined( HAVE_CONFIG_H )
+# include "config.h"
+#endif /* HAVE_CONFIG_H */
 
 #include "mz_common.h"
 #include "mz_display.h"
@@ -109,13 +125,13 @@
 #define RATION        0
 #define FRUIT         1
 
-#define NOT_USED      ((unsigned short) 0)
-#define BEING_WIELDED ((unsigned short) 01)
-#define BEING_WORN    ((unsigned short) 02)
-#define ON_LEFT_HAND  ((unsigned short) 04)
-#define ON_RIGHT_HAND ((unsigned short) 010)
+#define NOT_USED       ((unsigned short) 0)
+#define BEING_WIELDED  ((unsigned short) 01)
+#define BEING_WORN     ((unsigned short) 02)
+#define ON_LEFT_HAND   ((unsigned short) 04)
+#define ON_RIGHT_HAND  ((unsigned short) 010)
 #define ON_EITHER_HAND ((unsigned short) 014)
-#define BEING_USED    ((unsigned short) 017)
+#define BEING_USED     ((unsigned short) 017)
 
 #define NO_TRAP           -1
 #define TRAP_DOOR          0
@@ -149,30 +165,49 @@ struct id
     unsigned short id_status;
 };
 
-struct obj
-{
-    unsigned long m_flags;
-//  char *damage;
-    short quantity;
-    char ichar;
-    short kill_exp;
-    u8 is_protected;
-    u8 is_cursed;
-    short class;
-    short identified;
-    unsigned short which_kind;
-//  short o_row, o_col, o;
-    short row, col;
-    s8 d_enchant;
-//  short quiver;
-//  short trow, tcol;
-    s8 hit_enchant;
-    unsigned short what_is;
-    u8 picked_up;
-    unsigned short in_use_flags;
-    struct obj *next_object;
+/* The following #defines provide more meaningful names for some of the
+ * struct object fields that are used for monsters.  This, since each monster
+ * and object (scrolls, potions, etc) are represented by a struct object.
+ * Ideally, this should be handled by some kind of union structure.
+ */
+#define hp_to_kill       quantity
+#define m_char           ichar
+#define first_level      is_protected
+#define last_level       is_cursed
+#define m_hit_chance     class
+#define stationary_damage identified
+#define drop_percent     which_kind
+#define moves_confused   hit_enchant
+#define nap_length       d_enchant
+#define disguise         what_is
+#define next_monster     next_object
 
+struct obj
+{				/* comment is monster meaning */
+    unsigned long m_flags;	/* monster flags */
+/*  char *damage; */		/* damage it does */
+    short quantity;	    	/* hit points to kill */
+    char ichar;		        /* 'A' is for aquatar */
+    short kill_exp;         /* exp for killing it */
+    u8 is_protected;        /* level starts */
+    u8 is_cursed;           /* level ends */
+    short class;            /* chance of hitting you */
+    short identified;		/* 'F' damage, 1,2,3... */
+    unsigned short which_kind;	/* item carry/drop % */
+/*  short o_row, o_col, o;*//* o is how many times stuck at o_row, o_col */
+    short row, col;         /* current row, col */
+    s8 d_enchant;           /* room char when detect_monster */
+/*  short quiver; */		/* monster slowed toggle */
+/* short trow, tcol;*/		/* target row, col */
+    s8 hit_enchant;         /* how many moves is confused */
+    unsigned short what_is;	/* imitator's charactor (?!%: */
+    u8 picked_up;		    /* sleep from wand of sleep */
+    unsigned short in_use_flags;
+    struct obj *next_object;/* next monster */
+
+    /* MZ-700/MZ-1500 固有*/
     u8 trail_char;
+    u8 trail_attr;
     u8 m_damage_n1;
     u8 m_damage_s1;
     u8 m_damage_n2;
@@ -182,59 +217,42 @@ struct obj
 
 typedef struct obj object;
 
-/* Monster meanings for fields shared with object, as in the original. */
-#define hp_to_kill  quantity
-#define m_char      ichar
-#define first_level  is_protected
-#define last_level   is_cursed
-#define m_hit_chance class
-#define drop_percent which_kind
-#define stationary_damage identified
-#define moves_confused hit_enchant
-#define disguise what_is
-
 #define INIT_HP       12
 
 struct fight {
-    long gold;
+    object *armor;
+    object *weapon;
+    object *left_ring,*right_ring;
     short hp_current;
     short hp_max;
     short str_current;
     short str_max;
+    object pack;
+    long gold;
     short exp;
     long exp_points;
-    short row;
-    short col;
+    short row,col;
     short fchar;
     short moves_left;
-    object *weapon;
-    object *armor;
-    object *left_ring;
-    object *right_ring;
-    object pack;
 };
 
 typedef struct fight fighter;
 
 struct dr {
     short oth_room;
-    short oth_row;
-    short oth_col;
-    short door_row;
-    short door_col;
+    short oth_row, oth_col;
+    short door_row, door_col;
 };
 
 typedef struct dr door;
 
-typedef struct rm {
-    unsigned short is_room;
-    u8 bottom_row;
-    u8 right_col;
-    u8 left_col;
-    u8 top_row;
-    u8 center_row;
-    u8 center_col;
+struct rm {
+    u8 bottom_row, right_col, left_col, top_row;
     door doors[4];
+    unsigned short is_room;
+
+    /* MZ-700/1500固有 */
+    u8 center_row, center_col;
 };
 
 typedef struct rm room;
@@ -384,8 +402,7 @@ extern unsigned long rogue_turns;
 #define RCYAN    14
 
 /*
- * MZ-700/1500 port additions
- * 本家rogue.hに存在しない定義は、このブロックへまとめる。
+ * MZ-700/1500固有
  */
 #define ROGUE_COLUMNS 80
 #define ROGUE_LINES   25

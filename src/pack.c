@@ -62,7 +62,7 @@ object
 {
     object *obj;
     
-    obj = object_at(&level_objects, (short)row, (short)col);
+    obj = object_at(&level_objects, row, col);
     *status = 0;
 
     if (!obj) {
@@ -102,7 +102,7 @@ drop(void)
         message_id(89, 0);
         return;
     }
-    ch = (short)pack_letter(0, ALL_OBJECTS);
+    ch = pack_letter(0, ALL_OBJECTS);
     if (ch == CANCEL) return;
     obj = get_letter_object(ch);
     if (!obj) {
@@ -193,7 +193,7 @@ pack_letter(char *prompt, unsigned short mask)
         }
         if (ch == CANCEL) return CANCEL;
         obj = get_letter_object(ch);
-        if (obj && (obj->what_is & mask)) return (short)ch;
+        if (obj && (obj->what_is & mask)) return ch;
     }
 }
 
@@ -225,7 +225,7 @@ wear(void)
         message_id(96, 0);
         return;
     }
-    ch = (short)pack_letter(0, ARMOR);
+    ch = pack_letter(0, ARMOR);
 
     if (ch == CANCEL) {
         return;
@@ -271,7 +271,7 @@ wield(void)
         message_id(85, 0);
         return;
     }
-    ch = (short)pack_letter(0, WEAPON);
+    ch = pack_letter(0, WEAPON);
 
     if (ch == CANCEL) {
         return;
@@ -311,6 +311,58 @@ unwield(object *obj)
     rogue.weapon = (object *)0;
 }
 
+#if 0 /* MZ-700/1500では未対応 */
+void
+call_it(void)
+{
+    short ch;
+    object *obj;
+    struct id *id_table;
+    char buf[MAX_TITLE_LENGTH + 2];
+
+    ch = pack_letter(mesg[108], (SCROL | POTION | WAND | RING));
+
+    if (ch == CANCEL) {
+	return;
+    }
+    if (!(obj = get_letter_object(ch))) {
+	message(mesg[109], 0);
+	return;
+    }
+    if (!(obj->what_is & (SCROL | POTION | WAND | RING))) {
+	message(mesg[110], 0);
+	return;
+    }
+    id_table = get_id_table(obj);
+
+#if defined( JAPAN )
+    if (get_input_line(mesg[111],
+		       "", buf, id_table[obj->which_kind].title, 0, 1)) {
+	ch = *buf;
+#if defined( EUC )
+	if (ch >= ' ' && !(ch & 0x80)) {	/* by Yasha */
+	    /* alphabet or kana character; append 1 blank */
+	    (void) strcat(buf, " ");
+	}
+#else /* not EUC */
+	if (ch >= ' ' && ch <= '~' || ch >= 0xa0 && ch <= 0xde) {
+	    /* alphabet or kana character; append 1 blank */
+	    (void) strcat(buf, " ");
+	}
+#endif /* not EUC */
+	id_table[obj->which_kind].id_status = CALLED;
+	(void) strcpy(id_table[obj->which_kind].title, buf);
+    }
+#else /* not JAPAN */
+    if (get_input_line(mesg[111],
+		       "", buf, id_table[obj->which_kind].title, 1, 1)) {
+	id_table[obj->which_kind].id_status = CALLED;
+	(void) strcpy(id_table[obj->which_kind].title, buf);
+    }
+#endif /* not JAPAN */
+}
+#endif
+
 int
 pack_count(object *new_obj)
 {
@@ -343,12 +395,95 @@ mask_pack(object *pack, unsigned short mask)
     return 0;
 }
 
+#if 0 /* MZ-700/1500では未対応 */
+int
+is_pack_letter(short *c, unsigned short *mask)
+{
+    switch (*c) {
+    case '?':
+	*mask = SCROL;
+	goto found;
+    case '!':
+	*mask = POTION;
+	goto found;
+    case ':':
+	*mask = FOOD;
+	goto found;
+    case ')':
+	*mask = WEAPON;
+	goto found;
+    case ']':
+	*mask = ARMOR;
+	goto found;
+    case '/':
+	*mask = WAND;
+	goto found;
+    case '=':
+	*mask = RING;
+	goto found;
+    case ',':
+	*mask = AMULET;
+	goto found;
+    default:
+	return ((*c >= 'a' && *c <= 'z') || *c == CANCEL || *c == LIST);
+    }
+found:
+    *c = LIST;
+    return 1;
+}
+#endif
+
 int
 has_amulet(void)
 {
     return (mask_pack(&rogue.pack, AMULET));
 }
 
+#if 0 /* MZ-700/1500では未対応 */
+void
+kick_into_pack(void)
+{
+    object *obj;
+    char *p;
+    char desc[ROGUE_COLUMNS];
+    short stat;
+    extern short levitate;
+
+    if (!(dungeon[rogue.row][rogue.col] & OBJECT)) {
+	message(mesg[112], 0);
+    } else {
+#if !defined( ORIGINAL )
+	if (levitate) {
+	    message(mesg[113], 0);
+	    return;
+	}
+#endif /* ORIGINAL */
+	if ((obj = pick_up(rogue.row, rogue.col, &stat))) {
+	    get_desc(obj, desc, 1);
+#if defined( JAPAN )
+	    (void) strcat(desc, mesg[114]);
+#endif /* JAPAN */
+	    if (obj->what_is == GOLD) {
+		message(desc, 0);
+		free_object(obj);
+	    } else {
+		//p = desc + strlen(desc);
+		p = desc + utf8strlen(desc);
+		*p++ = '(';
+		*p++ = obj->ichar;
+		*p++ = ')';
+		*p = 0;
+		message(desc, 0);
+	    }
+	}
+	if (obj || (!stat)) {
+	    (void) reg_move();
+	}
+    }
+}
+#endif
+
+/* MZ-700/1500固有 */
 static void object_message(object *obj, short msg_id)
 {
     char *desc = (char *)TEMP_BUFFER_ADDR;

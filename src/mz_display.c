@@ -45,16 +45,15 @@ u8 mz_number(u8 *dst, unsigned long value)
 /*
     MZディスプレイコード対応のsprintf関数
 */
-int mz_sprintf(u8 *dst, short msg_id, const long *values)
+void mz_sprintf(u8 *dst, short msg_id, const long *values)
 {
-    u8 *start = dst;
     const u8 *format;
     u8 length;
 
     format = find_message(msg_id, &length);
     if (!format) {
         *dst = '\0';
-        return 0;
+        return;
     }
     while (length--) {
         u8 code = *format++;
@@ -83,5 +82,4 @@ int mz_sprintf(u8 *dst, short msg_id, const long *values)
         }
     }
     *dst = '\0';
-    return (int)(dst - start);
 }

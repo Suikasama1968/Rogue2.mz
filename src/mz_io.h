@@ -1,7 +1,7 @@
 /*
  * mz_io.h
  *
- * Quick Disk読み込み定義 for MZ-1500
+ * Quick Disk / Tape 読み込み定義 for MZ-700/1500
  * Copyright (c) 2026 Suikasama1968
  */
 

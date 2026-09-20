@@ -25,7 +25,7 @@
 #include "mz_system.h"
 
 short m_moves;
-unsigned long rogue_turns;
+/* unsigned long rogue_turns; 未使用 */
 extern short bear_trap;
 extern short blind;
 extern short halluc;
@@ -83,7 +83,7 @@ one_move_rogue(short dirch, short pickup)
     }
     if (DUNGEON(row, col) == TILE_DOOR) {
         if (cur_room == PASSAGE) {
-            cur_room = (short)get_room_number(row, col);
+            cur_room = get_room_number(row, col);
             if (cur_room >= 0 && (rooms[cur_room].is_room & R_MAZE)) {
                 light_passage(row, col);
                 cur_room = PASSAGE;
@@ -133,18 +133,187 @@ one_move_rogue(short dirch, short pickup)
     return MOVED;
 }
 
+#if 0 /* MZ-700/1500では未対応 */
+void
+multiple_move_rogue(int dirch)
+{
+    short row, col;
+    short m;
+#if !defined( ORIGINAL )
+    short n, i, ch = 0;		/* 未初期化変数の警告除去のため 0 で初期化 */
+    char *dir;
+#endif /* not ORIGINAL */
+
+    switch (dirch) {
+    case '\010':
+    case '\012':
+    case '\013':
+    case '\014':
+    case '\031':
+    case '\025':
+    case '\016':
+    case '\002':
+#if !defined( ORIGINAL )
+	dirch += 96;
+	do {
+	retry:
+	    row = rogue.row;
+	    col = rogue.col;
+	    m = one_move_rogue(dirch, 1);
+	    if (m == STOPPED_ON_SOMETHING || interrupted) {
+		break;
+	    }
+	    if (m != MOVE_FAILED) {
+		continue;
+	    }
+	    if (!pass_go || !bent_passage) {
+		break;
+	    }
+	    for (n = 0, dir = "hjkl", i = 0; i < 4; i++) {
+		row = rogue.row;
+		col = rogue.col;
+		get_dir_rc(dir[i], &row, &col, 1);
+		if (is_passable(row, col) && dirch != dir[3 - i]) {
+		    n++, ch = dir[i];
+		}
+	    }
+	    if (n == 1) {
+		dirch = ch;
+		goto retry;
+	    }
+	    break;
+	} while (!next_to_something(row, col));
+	break;
+#else /* ORIGINAL */
+	do {
+	    row = rogue.row;
+	    col = rogue.col;
+	    if (((m = one_move_rogue((dirch + 96), 1)) == MOVE_FAILED) ||
+		(m == STOPPED_ON_SOMETHING) || interrupted) {
+		break;
+	    }
+	} while (!next_to_something(row, col));
+	break;
+#endif /* ORIGINAL */
+    case 'H':
+    case 'J':
+    case 'K':
+    case 'L':
+    case 'B':
+    case 'Y':
+    case 'U':
+    case 'N':
+#if !defined( ORIGINAL )
+	dirch += 32;
+	for (;;) {
+	retry2:
+	    m = one_move_rogue(dirch, 1);
+	    if (interrupted) {
+		break;
+	    }
+	    if (m == MOVED) {
+		continue;
+	    }
+	    if (m != MOVE_FAILED || !pass_go || !bent_passage) {
+		break;
+	    }
+	    for (n = 0, dir = "hjkl", i = 0; i < 4; i++) {
+		row = rogue.row;
+		col = rogue.col;
+		get_dir_rc(dir[i], &row, &col, 1);
+		if (is_passable(row, col) && dirch != dir[3 - i]) {
+		    n++, ch = dir[i];
+		}
+	    }
+	    if (n == 1) {
+		dirch = ch;
+		goto retry2;
+	    }
+	    break;
+	}
+	break;
+#else /* ORIGINAL */
+	while ((!interrupted) && (one_move_rogue((dirch + 32), 1) == MOVED));
+	break;
+#endif /* ORIGINAL */
+    }
+}
+#endif
+
 int is_passable(int row, int col)
 {
     u8 tile;
 
     if (row < MIN_ROW || row > MAX_ROW ||
         col < 0 || col >= ROGUE_COLUMNS) {
-            return 0;
+        return 0;
     }
     tile = DUNGEON(row, col);
     return tile == TILE_FLOOR || tile == TILE_TUNNEL ||
            tile == TILE_DOOR || tile == TILE_STAIRS || tile == TILE_TRAP;
 }
+
+#if 0 /* MZ-700/1500では未対応 */
+int
+next_to_something(int drow, int dcol)
+{
+    short i, j, i_end, j_end, row, col;
+    short pass_count = 0;
+    unsigned short s;
+
+    if (confused) {
+	return 1;
+    }
+    if (blind) {
+	return 0;
+    }
+    i_end = (rogue.row < (ROGUE_LINES - 2)) ? 1 : 0;
+    j_end = (rogue.col < (ROGUE_COLUMNS - 1)) ? 1 : 0;
+
+    for (i = ((rogue.row > MIN_ROW) ? -1 : 0); i <= i_end; i++) {
+	for (j = ((rogue.col > 0) ? -1 : 0); j <= j_end; j++) {
+	    if ((i == 0 && j == 0) ||
+		(rogue.row + i == drow && rogue.col + j == dcol)) {
+		continue;
+	    }
+	    row = rogue.row + i;
+	    col = rogue.col + j;
+	    s = dungeon[row][col];
+	    if (s & HIDDEN) {
+		continue;
+	    }
+	    /* If the rogue used to be right, up, left, down,
+	     * or right of row, col, and now isn't,
+	     * then don't stop */
+	    if (s & (MONSTER | OBJECT | STAIRS)) {
+		if ((row == drow || col == dcol) &&
+		    (!(row == rogue.row || col == rogue.col))) {
+		    continue;
+		}
+		return 1;
+	    }
+	    if (s & TRAP) {
+		if (!(s & HIDDEN)) {
+		    if ((row == drow || col == dcol) &&
+			(!(row == rogue.row || col == rogue.col))) {
+			continue;
+		    }
+		    return 1;
+		}
+	    }
+	    if (((i - j == 1) || (i - j == -1)) && (s & TUNNEL)) {
+		if (++pass_count > 1) {
+		    return 1;
+		}
+	    }
+	    if ((s & DOOR) && ((i == 0) || (j == 0))) {
+		return 1;
+	    }
+	}
+    }
+    return 0;
+}
+#endif
 
 int
 can_move(int row1, int col1, int row2, int col2)
@@ -161,12 +330,24 @@ can_move(int row1, int col1, int row2, int col2)
     return 1;
 }
 
+#if 0 /* MZ-700/1500では未対応 */
+void
+move_onto(void)
+{
+    short ch;
+
+    ch = get_direction();
+    if (ch != CANCEL) {
+	(void) one_move_rogue(ch, 0);
+    }
+}
+#endif
+
 char is_direction(int c)
 {
     return c == 'h' || c == 'j' || c == 'k' || c == 'l' ||
            c == 'b' || c == 'y' || c == 'u' || c == 'n' || c == CANCEL;
 }
-
 
 boolean
 check_hunger(boolean messages_only)
@@ -192,7 +373,7 @@ check_hunger(boolean messages_only)
             get_message(75, (u8 *)hunger_str, sizeof(hunger_str));
             message_id(76, 0);
         }
-        n = (short)get_rand(0, (FAINT - rogue.moves_left));
+        n = get_rand(0, (FAINT - rogue.moves_left));
         if (n > 0) {
             fainted = 1;
             if (rand_percent(40)) {
@@ -241,7 +422,7 @@ reg_move(void)
 {
     boolean fainted = check_hunger(0);
 
-    rogue_turns++;
+    /* rogue_turns++; 未使用 */
     
     mv_mons();
 
@@ -296,6 +477,7 @@ rest(int count)
         (void) reg_move();
     }
 }
+
 int
 gr_dir(void)
 {

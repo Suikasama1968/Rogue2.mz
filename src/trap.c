@@ -22,6 +22,7 @@
 #include "score.h"
 #include "spechit.h"
 #include "trap.h"
+#include "use.h"
 #include "mz_curses.h"
 
 boolean trap_door;
@@ -60,25 +61,25 @@ trap_player(short row, short col)
 
     t = traps[i].trap_type;
     reveal_trap(i);
-    if (rand_percent(rogue.exp)) {
+    if (rand_percent(rogue.exp + ring_exp)) {
         message_id(228, 0);
         return;
     }
 
-    message_id((short)(217 + t * 2), 0);
+    message_id(217 + t * 2, 0);
     switch (t) {
     case TRAP_DOOR:
         trap_door = 1;
         break;
     case BEAR_TRAP:
-        bear_trap = (short)get_rand(4, 7);
+        bear_trap = get_rand(4, 7);
         break;
     case TELE_TRAP:
-        put_player(cur_room);
+        tele();
         break;
     case DART_TRAP:
 #if !defined(DEBUG)
-        rogue.hp_current -= (short)get_damage("1d6", 1);
+        rogue.hp_current -= get_damage("1d6", 1);
         if (rogue.hp_current < 0) rogue.hp_current = 0;
 #endif
         if ((!sustain_strength) && (rogue.str_current >= 3) && rand_percent(40)) {
@@ -90,7 +91,7 @@ trap_player(short row, short col)
         }
         break;
     case SLEEPING_GAS_TRAP:
-        rest(get_rand(2, 5));
+        take_a_nap();
         break;
     case RUST_TRAP:
         rust(0);
@@ -101,10 +102,8 @@ trap_player(short row, short col)
 void
 add_traps(void)
 {
-    short i;
-    short n;
-    short row;
-    short col;
+    short i, n;
+    short row, col;
 
     for (i = 0; i < MAX_TRAPS; i++) {
         traps[i].trap_type = NO_TRAP;
@@ -116,17 +115,17 @@ add_traps(void)
         return;
     }
     if (cur_level <= 7) {
-        n = (short)get_rand(0, 2);
+        n = get_rand(0, 2);
     } else if (cur_level <= 11) {
-        n = (short)get_rand(1, 2);
+        n = get_rand(1, 2);
     } else if (cur_level <= 16) {
-        n = (short)get_rand(2, 3);
+        n = get_rand(2, 3);
     } else if (cur_level <= 21) {
-        n = (short)get_rand(2, 4);
+        n = get_rand(2, 4);
     } else if (cur_level <= AMULET_LEVEL + 2) {
-        n = (short)get_rand(3, 5);
+        n = get_rand(3, 5);
     } else {
-        n = (short)get_rand(5, MAX_TRAPS);
+        n = get_rand(5, MAX_TRAPS);
     }
 
     for (i = 0; i < n; i++) {
@@ -134,12 +133,14 @@ add_traps(void)
             gr_row_col(&row, &col, FLOOR);
         } while (object_at(&level_objects, row, col) ||
                  trap_at(row, col) != NO_TRAP);
-        traps[i].trap_type = (short)get_rand(0, TRAPS - 1);
+        traps[i].trap_type = get_rand(0, TRAPS - 1);
         traps[i].trap_row = row;
         traps[i].trap_col = col;
         trap_hidden[i] = 1;
     }
 }
+
+#if 0 /* MZ-700/1500では未使用 */
 
 void
 id_trap(void)
@@ -156,6 +157,7 @@ show_traps(void)
         reveal_trap(i);
     }
 }
+#endif
 
 void search(short n, boolean is_auto)
 {
@@ -172,14 +174,15 @@ void search(short n, boolean is_auto)
             if (dr >= -1 && dr <= 1 && dc >= -1 && dc <= 1 &&
                 rand_percent(17 + rogue.exp + ring_exp)) {
                 reveal_trap(i);
-                message_id((short)(216 + traps[i].trap_type * 2), 0);
+                message_id(216 + traps[i].trap_type * 2, 0);
             }
         }
         if (!is_auto) reg_move();
     }
 }
 
-/* MZ-1500では文字コードとカラー属性を同時に更新する。 */
+/* MZ-700/1500固有 */
+/* 文字コードとカラー属性を同時に更新する。 */
 static void reveal_trap(short i)
 {
     short row = traps[i].trap_row;

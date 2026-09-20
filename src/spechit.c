@@ -104,7 +104,7 @@ freeze(object *monster)
     }
     monster->m_flags |= FREEZING_ROGUE;
     message_id(203, 0);
-    n = (short)get_rand(4, 8);
+    n = get_rand(4, 8);
     for (i = 0; i < n; i++) {
         mv_mons();
     }
@@ -202,7 +202,7 @@ cough_up(object *monster)
         obj = alloc_object();
         if (!obj) return;
         obj->what_is = GOLD;
-        obj->quantity = (short)get_rand((cur_level * 15), (cur_level * 30));
+        obj->quantity = get_rand((cur_level * 15), (cur_level * 30));
     } else {
         if (!rand_percent((int)monster->drop_percent)) {
             return;
@@ -242,7 +242,7 @@ seek_gold(object *monster)
 {
     short i, j, rn;
 
-	if ((rn = (short)get_room_number(monster->row, monster->col)) < 0) {
+	if ((rn = get_room_number(monster->row, monster->col)) < 0) {
     	return 0;
 	}
     for (i = rooms[rn].top_row + 1; i < rooms[rn].bottom_row; i++) {
@@ -305,10 +305,10 @@ sting(object *monster)
     if (sustain_strength || rogue.str_current <= 3) {
         return;
     }
-    sting_chance += (short)(6 * (6 - get_armor_class(rogue.armor)));
+    sting_chance += (6 * (6 - get_armor_class(rogue.armor)));
     
     if ((rogue.exp + ring_exp) > 8) {
-        sting_chance -= (short)(6 * ((rogue.exp + ring_exp) - 8));
+        sting_chance -= (6 * ((rogue.exp + ring_exp) - 8));
     }
     if (rand_percent(sting_chance)) {
         get_message(monster->m_name_id, name, 20);
@@ -328,7 +328,7 @@ drop_level(void)
 	}
     rogue.exp_points = level_points[rogue.exp - 2] - get_rand(9, 29);
     rogue.exp -= 2;
-    hp = (short)hp_raise();
+    hp = hp_raise();
 	if ((rogue.hp_current -= hp) <= 0) {
 		rogue.hp_current = 1;
 	}
@@ -347,7 +347,7 @@ drain_life(void)
     if (rand_percent(60) || (rogue.hp_max <= 30) || (rogue.hp_current < 10)) {
         return;
     }
-    n = (short)get_rand(1, 3);
+    n = get_rand(1, 3);
     
     if (n != 2 || !sustain_strength) {
        message_id(208, 0);
@@ -386,4 +386,30 @@ m_confuse(object *monster)
         return 1;
     }
     return 0;
+}
+
+int
+flame_broil(object *monster)
+{
+    short row, col;
+    u8 *name = (u8 *)TEMP_BUFFER_ADDR;
+
+    if ((!mon_sees(monster, rogue.row, rogue.col) || coin_toss())) {
+        return 0;
+    }
+    row = rogue.row - monster->row;
+    col = rogue.col - monster->col;
+    if (row < 0) {
+        row = -row;
+    }
+    if (col < 0) {
+        col = -col;
+    }
+    if (((row != 0) && (col != 0) && (row != col)) || ((row > 7) || (col > 7))) {
+        return 0;
+    }
+
+    get_message(200, name, 14);
+    mon_hit(monster, (char *)name, 1);
+    return 1;
 }

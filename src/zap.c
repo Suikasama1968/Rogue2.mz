@@ -32,11 +32,11 @@ zapp(void)
     short dir, row, col;
     object *monster;
 
-    dir = (short)get_direction();
+    dir = get_direction();
 	if (dir == CANCEL) {
 		return;
 	}
-	if ((wch = (short)pack_letter(0, WAND)) == CANCEL) {
+	if ((wch = pack_letter(0, WAND)) == CANCEL) {
 		return;
 	}
     check_message();
@@ -76,29 +76,30 @@ get_zapped_monster(short dir, short *row, short *col)
         old_col = *col;
         get_dir_rc(dir, row, col, 0);
         if ((*row == old_row && *col == old_col) ||
-            !is_passable(*row, *col)) return 0;
+            !is_passable(*row, *col)) {
+                return 0;
+        }
         monster = monster_at(*row, *col);
-        if (monster) return monster;
+        if (monster) {
+            return monster;
+        }
     }
-}
-
-object *
-get_missiled_monster(short dir, short *row, short *col)
-{
-    return get_zapped_monster(dir, row, col);
 }
 
 void
 zap_monster(object *monster, unsigned short kind)
 {
     short row, col;
-    object *next;
-    u8 trail, attr;
+    object *nm;
+    u8 tc, ta;
+
+    row = monster->row;
+    col = monster->col;
 
     switch (kind) {
     case SLOW_MONSTER:
         if (monster->m_flags & HASTED) {
-            monster->m_flags &= ~HASTED;
+            monster->m_flags &= (~HASTED);
         } else {
             monster->m_flags &= ~ALREADY_MOVED;
             monster->m_flags |= SLOWED;
@@ -114,6 +115,10 @@ zap_monster(object *monster, unsigned short kind)
     case TELE_AWAY:
         tele_away(monster);
         break;
+    case CONFUSE_MONSTER:
+        monster->m_flags |= CONFUSED;
+        monster->moves_confused += get_rand(12, 22);
+        break;
     case INVISIBILITY:
         monster->m_flags |= INVISIBLE;
         break;
@@ -121,38 +126,36 @@ zap_monster(object *monster, unsigned short kind)
         if (monster->m_flags & HOLDS) {
             being_held = 0;
         }
-        row = monster->row;
-        col = monster->col;
-        next = monster->next_object;
-        trail = monster->trail_char;
-        attr = monster->picked_up;
+        nm = monster->next_monster;
+        tc = monster->trail_char;
+        ta = monster->trail_attr;
         (void)gr_monster(monster, get_rand(0, MONSTERS - 1));
         monster->row = row;
         monster->col = col;
-        monster->next_object = next;
-        monster->trail_char = trail;
-        monster->picked_up = attr;
+        monster->next_monster = nm;
+        monster->trail_char = tc;
+        monster->trail_attr = ta;
         if (!(monster->m_flags & IMITATES)) {
             wake_up(monster);
         }
         break;
     case PUT_TO_SLEEP:
-        monster->m_flags |= ASLEEP | NAPPING;
-        monster->d_enchant = (char)get_rand(3, 6);
-        break;
-    case CONFUSE_MONSTER:
-        monster->m_flags |= CONFUSED;
-        monster->moves_confused += (char)get_rand(12, 22);
+        monster->m_flags |= (ASLEEP | NAPPING);
+        monster->nap_length = get_rand(3, 6);
         break;
     case MAGIC_MISSILE:
         rogue_hit(monster, 1);
         break;
     case CANCELLATION:
-        if (monster->m_flags & HOLDS) being_held = 0;
-        if (monster->m_flags & STEALS_ITEM) monster->drop_percent = 0;
-        monster->m_flags &= ~(FLIES | FLITS | SPECIAL_HIT | INVISIBLE |
+        if (monster->m_flags & HOLDS) {
+            being_held = 0;
+        }
+        if (monster->m_flags & STEALS_ITEM) {
+            monster->drop_percent = 0;
+        }
+        monster->m_flags &= (~(FLIES | FLITS | SPECIAL_HIT | INVISIBLE |
                               FLAMES | IMITATES | CONFUSES | SEEKS_GOLD |
-                              HOLDS);
+                              HOLDS));
         break;
     case DO_NOTHING:
         message_id(281, 0);
@@ -174,3 +177,58 @@ tele_away(object *monster)
     monster->row = row;
     monster->col = col;
 }
+
+#if 0 /* MZ-700/1500では未対応 */
+void
+wizardize(void)
+{
+#if defined( WIZARD )
+    char buf[100];
+
+    if (wizard) {
+	wizard = 0;
+#if defined( JAPAN )
+	message("もはや、魔法使いではない。", 0);
+#else /* not JAPAN */
+	message("Not wizard anymore", 0);
+#endif
+    } else {
+#if defined( JAPAN )
+	if (get_input_line("魔法使いの合言葉は？",
+#else /* not JAPAN */
+	if (get_input_line("Wizard's password:",
+#endif /* not JAPAN */
+			   "", buf, "", 0, 0)) {
+	    (void) xxx(1);
+	    //xxxx(buf, strlen(buf));
+	    xxxx(buf, utf8strlen(buf));
+#if !defined( ORIGINAL )
+	    if (!memcmp(buf, wiz_passwd, 11)) {
+#else /* ORIGINAL */
+	    if (!strncmp(buf, "\247\104\126\272\115\243\027", 7)) {
+#endif /* ORIGINAL */
+		wizard = 1;
+		score_only = 1;
+#if defined( JAPAN )
+		message("ようこそ、魔法使いよ！", 0);
+#else /* not JAPAN */
+		message("Welcome, mighty wizard!", 0);
+#endif /* not JAPAN */
+	    } else {
+#if defined( JAPAN )
+		message("そんな合言葉、知らないね。", 0);
+#else /* not JAPAN */
+		message("Sorry", 0);
+#endif /* not JAPAN */
+	    }
+	}
+    }
+#else /* not WIZARD */
+#if defined( JAPAN )
+   message("魔法使いは封印されている。", 0);
+#else
+   message("Wizard has been blocked.", 0);
+#endif
+#endif /* not WIZARD */
+}
+#endif

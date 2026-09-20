@@ -30,12 +30,8 @@ extern boolean being_held;
 static const u8 weapon_damage_n[WEAPONS] = { 1, 1, 1, 1, 1, 2, 3, 4 };
 static const u8 weapon_damage_s[WEAPONS] = { 1, 1, 2, 3, 4, 3, 4, 5 };
 
+static void get_monster_name(object *monster, u8 *name, short size);
 static void append_hit_message(short msg_id, const u8 *text);
-
-static void get_monster_name(object *monster, u8 *name, short size)
-{
-    get_message(monster->m_name_id, name, size);
-}
 
 void
 mon_hit(object *monster, char *other, boolean flame)
@@ -43,15 +39,21 @@ mon_hit(object *monster, char *other, boolean flame)
     int damage, hit_chance;
     int i;
     u8 *name = (u8 *)TEMP_BUFFER_ADDR;
+    const u8 *attacker;
 
-    (void)other;
-    (void)flame;
-
-    get_monster_name(monster, name, 20);
+    if (other) {
+        attacker = (const u8 *)other;
+    } else {
+        get_monster_name(monster, name, 20);
+        attacker = name;
+    }
     hit_chance = monster->m_hit_chance;
     hit_chance -= (((2 * rogue.exp) + (2 * ring_exp)) - r_rings);
+    if (other) {
+        hit_chance -= ((rogue.exp + ring_exp) - r_rings);
+    }
     if (!rand_percent(hit_chance)) {
-        append_hit_message(18, name);
+        append_hit_message(18, attacker);
         show_hit_message();
         return;
     }
@@ -66,11 +68,14 @@ mon_hit(object *monster, char *other, boolean flame)
         for (i = 0; i < monster->m_damage_n2; ++i) {
             damage += get_rand(1, monster->m_damage_s2);
         }
+        if (flame && (damage -= get_armor_class(rogue.armor)) < 0) {
+            damage = 1;
+        }
         damage -= (damage * get_armor_class(rogue.armor) * 3) / 100;
     }
-    append_hit_message(19, name);
+    append_hit_message(19, attacker);
     show_hit_message();
-    if (damage > 0) rogue_damage((short)damage, monster);
+    if (damage > 0) rogue_damage(damage, monster);
     if (monster->m_flags & SPECIAL_HIT) special_hit(monster);
 }
 
@@ -167,6 +172,7 @@ get_number(char *s)
     return total;
 }
 
+#if 0 /* MZ-700/1500では未サポート */
 long
 lget_number(char *s)
 {
@@ -177,6 +183,7 @@ lget_number(char *s)
     }
     return total;
 }
+#endif
 
 int
 to_hit(object *obj)
@@ -188,14 +195,21 @@ to_hit(object *obj)
 int
 damage_for_strength(void)
 {
-    short strength = rogue.str_current + add_strength;
+    short strength;
     int i;
     static const short sa[] = { 14, 17, 18, 20, 21, 30, 9999 };
     static const short ra[] = { 1, 3, 4, 5, 6, 7, 8 };
 
-    if (strength <= 6) return strength - 5;
-    for (i = 0;; ++i) {
-        if (strength <= sa[i]) return ra[i];
+    strength = rogue.str_current + add_strength;
+    if (strength <= 6) {
+        return (strength - 5);
+    }
+    i = 0;
+    for (;;) {
+        if (strength <= sa[i]) {
+            return ra[i];
+        }
+    i++;
     }
 }
 
@@ -205,11 +219,16 @@ mon_damage(object *monster, int damage)
     u8 *name = (u8 *)TEMP_BUFFER_ADDR;
     short kill_exp;
 
-    monster->hp_to_kill -= (short)damage;
-    if (monster->hp_to_kill > 0) return 1;
+    monster->hp_to_kill -= damage;
+
+    if (monster->hp_to_kill > 0) {
+        return 1;
+    }
     get_monster_name(monster, name, 20);
     kill_exp = monster->kill_exp;
-    if (monster->m_flags & HOLDS) being_held = 0;
+    if (monster->m_flags & HOLDS) {
+        being_held = 0;
+    }
     remove_monster(monster);
     cough_up(monster);
     append_hit_message(24, name);
@@ -217,6 +236,52 @@ mon_damage(object *monster, int damage)
     add_exp(kill_exp, 1);
     return 0;
 }
+
+#if 0 /* MZ-700/1500では未対応 */
+void
+fight(boolean to_the_death)
+{
+    short ch, c;
+    short row, col;
+    short possible_damage;
+    object *monster;
+
+    ch = get_direction();
+    if (ch == CANCEL) {
+	return;
+    }
+    row = rogue.row;
+    col = rogue.col;
+    get_dir_rc(ch, &row, &col, 0);
+
+    c = mvinch_rogue(row, col);
+    if (((c < 'A') || (c > 'Z')) ||
+	(!can_move(rogue.row, rogue.col, row, col))) {
+	    message(mesg[25], 0);
+	    return;
+    }
+    if (!(fight_monster = object_at(&level_monsters, row, col))) {
+	    return;
+    }
+    if (!(fight_monster->m_flags & STATIONARY)) {
+	    possible_damage = ((get_damage(fight_monster->m_damage, 0) * 2) / 3);
+    } else {
+	    possible_damage = fight_monster->stationary_damage - 1;
+    }
+    while (fight_monster) {
+	    (void) one_move_rogue(ch, 0);
+	    if (((!to_the_death) && (rogue.hp_current <= possible_damage)) ||
+	        interrupted || (!(dungeon[row][col] & MONSTER))) {
+	        fight_monster = 0;
+	    } else {
+	        monster = object_at(&level_monsters, row, col);
+	        if (monster != fight_monster) {
+		       fight_monster = 0;
+	        }
+	    }
+    }
+}
+#endif
 
 void
 get_dir_rc(short dir, short *row, short *col, short allow_off_screen)
@@ -289,7 +354,13 @@ get_weapon_damage(object *weapon)
     return damage;
 }
 
-/* MZ-1500固有の処理 */
+/* MZ-700/1500固有 */
+static void
+get_monster_name(object *monster, u8 *name, short size)
+{
+    get_message(monster->m_name_id, name, size);
+}
+
 void
 show_hit_message(void)
 {

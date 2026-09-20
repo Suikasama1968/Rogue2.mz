@@ -1,7 +1,7 @@
 /*
  * mz_curses.h
  *
- * 簡易版Unix CURSES互換関数 for MZ-1500
+ * 簡易版Unix CURSES互換関数 for MZ-700/1500
  * Copyright (c) 2026 Suikasama1968
  */
 #ifndef _MZ_CURSES_H
@@ -54,7 +54,9 @@ extern int refresh(void);
 extern int getch(void);
 extern int flushinp(void);
 extern int clrtoeol(void);
+#if 0 /* Rouge2では未使用 */
 extern int clrtobot(void);
+#endif
 extern int init_pair(short, short, short);
 extern int attrset(attr_t);
 

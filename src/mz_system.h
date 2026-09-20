@@ -1,7 +1,7 @@
 /*
  * mz_system.h
  *
- * システム制御定義 for MZ-1500
+ * システム制御定義 for MZ-700/1500
  * Copyright (c) 2026 Suikasama1968
  */
 
@@ -14,14 +14,15 @@
 extern "C" {
 #endif
 
-// DRAM : 0x0000-0x0fff (default Monitor ROM area)
+// メモリ領域定義
 #define LOW_RAM_BEGIN       0x0000
 #define LOW_RAM_END         0x1000
 #define LOW_RAM_SIZE        (LOW_RAM_END - LOW_RAM_BEGIN)
 
-
 // システム情報 格納先頭アドレス : 0x0000-0x00ff
 #define SYSTEM_WORK     LOW_RAM_BEGIN
+// プログラム情報 格納アドレス   : 0x0100-0xfff
+#define PROGRAM_WORK    (LOW_RAM_BEGIN + 0x0100)
 
 // キー入力結果格納先 (10バイト)
 #define KEYDATA         (SYSTEM_WORK + 0x0000)
@@ -49,11 +50,36 @@ extern "C" {
 #define FUNC_TRACE      (SYSTEM_WORK + 0x0030)
 #define ISR_COUNT       (SYSTEM_WORK + 0x0040)
 
-// プログラム情報 格納アドレス : 0x0100-0x0xfff
-#define PROGRAM_WORK        0x0100
+// メモリマップドI/O
+#define _8255_PORT_A    0xe000
+#define _8255_PORT_B    0xe001
+#define _8255_PORT_C    0xe002
+#define _8255_CONTROL   0xe003
+#define _8253_CH0       0xe004
+#define _8253_CH1       0xe005
+#define _8253_CH2       0xe006
+#define _8253_CONTROL   0xe007
+#define _8253_CH0_GATE  0xe008
 
+// 8255ポートA キーストローブ
+#define KEY_STROBE_0    0xf0
+#define KEY_STROBE_1    0xf1
+#define KEY_STROBE_2    0xf2
+#define KEY_STROBE_3    0xf3
+#define KEY_STROBE_4    0xf4
+#define KEY_STROBE_5    0xf5
+#define KEY_STROBE_6    0xf6
+#define KEY_STROBE_7    0xf7
+#define KEY_STROBE_8    0xf8
+#define KEY_STROBE_9    0xf9
+
+// VRAMバンクのメモリマップ
+#define TEXT_VRAM        0xd000
+#define TEXT_ATTR        0xd800
+#define TEXT_VRAM_OFFSET 0x0800
 
 // 0x0100-0x04cfは空き領域
+// 空き領域にrogue2固有のデータを配置
 
 // 戦闘メッセージ用バッファ
 #define HIT_MESSAGE_ADDR     (PROGRAM_WORK + 0x03d0)
@@ -91,9 +117,9 @@ extern "C" {
 
 // フロア内のオブジェクトリスト先頭
 #define LEVEL_OBJECTS_ADDR  (PROGRAM_WORK + 0x0c20)
-#define LEVEL_OBJECTS_SIZE  0x0025
+#define LEVEL_OBJECTS_SIZE  0x0026
 #define LEVEL_MONSTERS_ADDR (PROGRAM_WORK + 0x0c46)
-#define LEVEL_MONSTERS_SIZE 0x0025
+#define LEVEL_MONSTERS_SIZE 0x0026
 
 // 部屋の生成・訪問状態
 #define ROOM_EXISTS_ADDR    (PROGRAM_WORK + 0x0c6c)
@@ -115,34 +141,6 @@ extern "C" {
 #define MAZE_STACK_ENTRIES   125
 #define MAZE_STACK_SIZE      (MAZE_STACK_ENTRIES * 3)
 
-// メモリマップドI/O
-#define _8255_PORT_A    0xe000
-#define _8255_PORT_B    0xe001
-#define _8255_PORT_C    0xe002
-#define _8255_CONTROL   0xe003
-#define _8253_CH0       0xe004
-#define _8253_CH1       0xe005
-#define _8253_CH2       0xe006
-#define _8253_CONTROL   0xe007
-#define _8253_CH0_GATE  0xe008
-
-// 8255ポートA キーストローブ
-#define KEY_STROBE_0    0xf0
-#define KEY_STROBE_1    0xf1
-#define KEY_STROBE_2    0xf2
-#define KEY_STROBE_3    0xf3
-#define KEY_STROBE_4    0xf4
-#define KEY_STROBE_5    0xf5
-#define KEY_STROBE_6    0xf6
-#define KEY_STROBE_7    0xf7
-#define KEY_STROBE_8    0xf8
-#define KEY_STROBE_9    0xf9
-
-// VRAMバンクのメモリマップ
-#define TEXT_VRAM        0xd000
-#define TEXT_ATTR        0xd800
-#define TEXT_VRAM_OFFSET 0x0800
-
 // QuickDiskから読み込む圧縮データの一時領域
 #define MESG_LOAD_ADDR          0xc000
 #define MESG_LOAD_SIZE          0x1000
@@ -158,9 +156,9 @@ extern "C" {
  * 0xee50-0xeea7  指輪識別テーブル
  * 0xeea8-0xeee3  杖材質名ポインタ
  * 0xeee4-0xeeff  指輪宝石名ポインタ
- * 0xef00-0xf5ef  共用オブジェクトプール
- * 0xf5f0-0xf61f  オブジェクト使用状態
- * 0xf620-0xffff  空き領域
+ * 0xef00-0xf61f  共用オブジェクトプール
+ * 0xf620-0xf64f  オブジェクト使用状態
+ * 0xf650-0xffff  空き領域
  */
 #define EXTERNAL_DATA_ADDR      0xd000
 #define EXTERNAL_DATA_END       0xef00
@@ -188,8 +186,8 @@ extern "C" {
 
 // オブジェクトデータ(最大48個)
 #define OBJECT_POOL_ADDR        0xef00
-#define OBJECT_POOL_SIZE        0x06f0
-#define OBJECT_USED_ADDR        0xf5f0
+#define OBJECT_POOL_SIZE        0x0720
+#define OBJECT_USED_ADDR        0xf620
 #define OBJECT_USED_SIZE        0x0030
 
 // PCG関連

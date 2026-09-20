@@ -33,17 +33,17 @@ short party_counter;
 unsigned short identified_potions;
 
 fighter rogue = {
-    0,                          /* gold */
+    0, 0,                       /* armor, weapon */
+    0, 0,                       /* rings */
     INIT_HP,                    /* Hp current */
     INIT_HP,                    /* Hp max */
     16, 16,                     /* Str */
+    {0},                        /* pack */
+    0,                          /* gold */
     1, 0,                       /* exp, exp_points */
     0, 0,                       /* row, col */
     DC_AT,                      /* char */
-    1250,                       /* moves */
-    0, 0,                       /* weapon, armor */
-    0, 0,                       /* rings */
-    {0}                         /* pack */
+    1250                        /* moves */
 };
 
 void
@@ -82,8 +82,8 @@ put_gold(void)
             continue;
         }
         for (j = 0; j < 50; j++) {
-            row = (short)get_rand(rooms[i].top_row + 1, rooms[i].bottom_row - 1);
-            col = (short)get_rand(rooms[i].left_col + 1, rooms[i].right_col - 1);
+            row = get_rand(rooms[i].top_row + 1, rooms[i].bottom_row - 1);
+            col = get_rand(rooms[i].left_col + 1, rooms[i].right_col - 1);
             if (DUNGEON(row, col) == TILE_FLOOR &&
                 !object_at(&level_objects, row, col)) {
                 plant_gold(row, col, 0);
@@ -102,7 +102,7 @@ void plant_gold(short row, short col, boolean is_maze)
     if (!obj) return;
     obj->what_is = GOLD;
     obj->which_kind = 0;
-    obj->quantity = (short)get_rand(2 * cur_level, 16 * cur_level);
+    obj->quantity = get_rand(2 * cur_level, 16 * cur_level);
     if (is_maze) obj->quantity += obj->quantity / 2;
     place_at(obj, row, col);
 }
@@ -110,8 +110,8 @@ void plant_gold(short row, short col, boolean is_maze)
 void
 place_at(object *obj, int row, int col)
 {
-    obj->row = (short)row;
-    obj->col = (short)col;
+    obj->row = row;
+    obj->col = col;
     add_to_pack(obj, &level_objects, 0);
 }
 object *
@@ -181,19 +181,6 @@ gr_object(void)
     return obj;
 }
 
-void clear_level_objects(void)
-{
-    object *obj = level_objects.next_object;
-    object *next;
-
-    while (obj) {
-        next = obj->next_object;
-        free_object(obj);
-        obj = next;
-    }
-    level_objects.next_object = 0;
-}
-
 unsigned short
 gr_what_is(void)
 {
@@ -224,7 +211,7 @@ gr_scroll(object *obj)
     obj->what_is = SCROL;
     for (i = 0;; i++) {
         if (percent <= per[i]) {
-            obj->which_kind = (unsigned short)i;
+            obj->which_kind = i;
             return;
         }
     }
@@ -243,7 +230,7 @@ gr_potion(object *obj)
     obj->what_is = POTION;
     for (i = 0; i < POTIONS; i++) {
         if (percent <= per[i]) {
-            obj->which_kind = (unsigned short)i;
+            obj->which_kind = i;
             return;
         }
     }
@@ -260,19 +247,19 @@ gr_weapon(object *obj, int assign_wk)
 
     obj->what_is = WEAPON;
     if (assign_wk) {
-        obj->which_kind = (unsigned short)get_rand(0, WEAPONS - 1);
+        obj->which_kind = get_rand(0, WEAPONS - 1);
     }
-    kind = (short)obj->which_kind;
+    kind = obj->which_kind;
     if (kind == DART || kind == ARROW || kind == DAGGER || kind == SHURIKEN) {
-        obj->quantity = (short)get_rand(3, 15);
+        obj->quantity = get_rand(3, 15);
     } else {
         obj->quantity = 1;
     }
     obj->hit_enchant = obj->d_enchant = 0;
     obj->is_cursed = 0;
 
-    percent = (short)get_rand(1, 96);
-    blessing = (short)get_rand(1, 3);
+    percent = get_rand(1, 96);
+    blessing = get_rand(1, 3);
 
     if (percent <= 16) {
         increment = 1;
@@ -299,8 +286,8 @@ gr_armor(object *obj, int assign_wk)
 
     obj->what_is = ARMOR;
     if (assign_wk) 		/* by Yasha */
-        obj->which_kind = (unsigned short)get_rand(0, (ARMORS - 1));
-    obj->class = (short)obj->which_kind + 2;
+        obj->which_kind = get_rand(0, (ARMORS - 1));
+    obj->class = obj->which_kind + 2;
     if (obj->which_kind == PLATE || obj->which_kind == SPLINT) {
         obj->class--;
     }
@@ -309,8 +296,8 @@ gr_armor(object *obj, int assign_wk)
     obj->is_cursed = 0;
     obj->d_enchant = 0;
 
-    percent = (short)get_rand(1, 100);
-    blessing = (short)get_rand(1, 3);
+    percent = get_rand(1, 100);
+    blessing = get_rand(1, 3);
 
     if (percent <= 16) {
         obj->is_cursed = 1;
@@ -324,11 +311,11 @@ void
 gr_wand(object *obj)
 {
     obj->what_is = WAND;
-    obj->which_kind = (unsigned short)get_rand(0, WANDS - 1);
+    obj->which_kind = get_rand(0, WANDS - 1);
     if (obj->which_kind == MAGIC_MISSILE) {
-        obj->hit_enchant = (char)get_rand(6, 12);
+        obj->hit_enchant = get_rand(6, 12);
     } else {
-        obj->hit_enchant = (char)get_rand(3, 6);
+        obj->hit_enchant = get_rand(3, 6);
     }
 }
 
@@ -342,40 +329,6 @@ get_food(object *obj, boolean force_ration)
     } else {
 	    obj->which_kind = FRUIT;
     }
-}
-
-void rand_place(object *obj)
-{
-    short row;
-    short col;
-
-    do {
-        gr_row_col(&row, &col, FLOOR | TUNNEL);
-    } while (object_at(&level_objects, row, col));
-    place_at(obj, row, col);
-}
-
-void put_amulet(void)
-{
-    object *obj = alloc_object();
-
-    if (!obj) return;
-    obj->what_is = AMULET;
-    obj->which_kind = 0;
-    obj->quantity = 1;
-    rand_place(obj);
-}
-
-int
-next_party(void)
-{
-    int n;
-
-    n = cur_level;
-    while (n % PARTY_TIME) {
-        n++;
-    }
-    return (get_rand((n + 1), (n + PARTY_TIME)));
 }
 
 void put_stairs(void)
@@ -429,6 +382,12 @@ free_object(object *obj)
     } while (i--);
 }
 
+void make_party(void)
+{
+    party_room = gr_room();
+    party_objects(party_room);
+}
+
 void
 show_objects(void)
 {
@@ -441,8 +400,274 @@ show_objects(void)
     }
 }
 
-void make_party(void)
+void put_amulet(void)
 {
-    party_room = (short)gr_room();
-    party_objects(party_room);
+    object *obj = alloc_object();
+
+    if (!obj) return;
+    obj->what_is = AMULET;
+    obj->which_kind = 0;
+    obj->quantity = 1;
+    rand_place(obj);
+}
+
+void rand_place(object *obj)
+{
+    short row, col;
+
+    do {
+        gr_row_col(&row, &col, FLOOR | TUNNEL);
+    } while (object_at(&level_objects, row, col));
+    place_at(obj, row, col);
+}
+
+#if 0 /* MZ-700/1500では未対応 */
+
+void
+new_object_for_wizard(void)
+{
+    short ch, max = 0;		/* 未初期化変数の使用の Warning の対策で 0 を不可 */
+#if defined( ORIGINAL )
+    short wk;
+#endif /* ORIGINAL */
+    object *obj;
+    char buf[80];
+
+    if (pack_count((object *) 0) >= MAX_PACK_COUNT) {
+	message(mesg[81], 0);
+	return;
+    }
+    message(mesg[82], 0);
+
+    while (r_index("!?:)]=/,\033", (ch = rgetchar()), 0) == -1) {
+	sound_bell();
+    }
+    check_message();
+    if (ch == '\033') {
+	return;
+    }
+
+    obj = alloc_object();
+
+    switch (ch) {
+    case '!':
+	obj->what_is = POTION;
+	max = POTIONS - 1;
+	break;
+    case '?':
+	obj->what_is = SCROL;
+	max = SCROLS - 1;
+	break;
+    case ',':
+	obj->what_is = AMULET;
+	break;
+    case ':':
+	get_food(obj, 0);
+	break;
+    case ')':
+/*		gr_weapon(obj, 0);*/
+	obj->what_is = WEAPON;
+	max = WEAPONS - 1;
+	break;
+    case ']':
+/*		gr_armor(obj);*/
+	obj->what_is = ARMOR;	/* by Yasha */
+	max = ARMORS - 1;
+	break;
+    case '/':
+	gr_wand(obj);
+	max = WANDS - 1;
+	break;
+    case '=':
+	max = RINGS - 1;
+	obj->what_is = RING;
+	break;
+    }
+    if ((ch != ',') && (ch != ':')) {
+#if !defined( ORIGINAL )
+/*		sprintf(buf, mesg[83], name_of(obj));*/
+	sprintf(buf, mesg[83], (obj->what_is == WEAPON)	/* by Yasha */
+		? mesg[84] : name_of(obj));	/* by Yasha */
+	for (;;) {
+	    message(buf, 0);
+	    for (;;) {
+		ch = rgetchar();
+		if ((ch != LIST && ch != CANCEL && ch < 'a') || ch > 'a' + max) {
+		    sound_bell();
+		} else {
+		    break;
+		}
+	    }
+	    if (ch == LIST) {
+		check_message();
+		list_object(obj, max);
+	    } else {
+		break;
+	    }
+	}
+	check_message();
+	if (ch == CANCEL) {
+	    free_object(obj);
+	    return;
+	}
+	obj->which_kind = ch - 'a';
+	if (obj->what_is == RING) {
+	    gr_ring(obj, 0);
+	}
+
+	if (obj->what_is == ARMOR) {	/* by Yasha */
+	    gr_armor(obj, 0);	/* by Yasha */
+	} else if (obj->what_is == WEAPON) {	/* by Yasha */
+	    gr_weapon(obj, 0);	/* by Yasha */
+	}
+#else /* ORIGINAL */
+	    if (get_input_line("Which kind?", "", buf, "", 0, 1)) {
+	    wk = get_number(buf);
+	    if ((wk >= 0) && (wk <= max)) {
+		obj->which_kind = (unsigned short) wk;
+		if (obj->what_is == RING) {
+		    gr_ring(obj, 0);
+		}
+	    } else {
+		sound_bell();
+		goto GIL;
+	    }
+	} else {
+	    free_object(obj);
+	    return;
+	}
+#endif /* ORIGINAL */
+    }
+    get_desc(obj, buf, 1);
+    message(buf, 0);
+    (void) add_to_pack(obj, &rogue.pack, 1);
+}
+
+void
+list_object(object *obj, short max)
+{
+    short i, j, maxlen, n;
+    char descs[ROGUE_LINES][ROGUE_COLUMNS];
+    short row, col;
+    struct id *id;
+    int weapon_or_armor;	/* by Yasha */
+#if defined( COLOR )
+    char *p;
+#endif /* COLOR */
+#if defined( JAPAN )
+    char *msg = "  ＝スペースを押してください＝";
+    short len = 30;
+#else /* not JAPAN */
+    char *msg = " --Press space to continue--";
+    short len = 28;
+#endif /* not JAPAN */
+
+    weapon_or_armor = 0;
+    switch (obj->what_is) {
+    case ARMOR:
+	id = id_armors;
+	weapon_or_armor = 1;	/* by Yasha */
+	break;
+    case WEAPON:
+	id = id_weapons;
+	weapon_or_armor = 1;	/* by Yasha */
+	break;
+    case SCROL:
+	id = id_scrolls;
+	break;
+    case POTION:
+	id = id_potions;
+	break;
+    case WAND:
+	id = id_wands;
+	break;
+    case RING:
+	id = id_rings;
+	break;
+    default:
+	return;
+    }
+
+    maxlen = len;
+    for (i = 0; i <= max; i++) {
+#if 1				/* by Yasha */
+#if defined( JAPAN )
+	sprintf(descs[i], " %c) %s%s", i + 'a',
+		weapon_or_armor ? id[i].title : id[i].real,
+		weapon_or_armor ? "" : name_of(obj));
+#else /* not JAPAN */
+	sprintf(descs[i], " %c) %s%s", i + 'a',
+		weapon_or_armor ? "" : name_of(obj),
+		weapon_or_armor ? id[i].title : id[i].real);
+#endif /* not JAPAN */
+#else
+#if defined( JAPAN )
+	sprintf(descs[i], " %c) %s%s", i + 'a', id[i].real, name_of(obj));
+#else /* not JAPAN */
+	sprintf(descs[i], " %c) %s%s", i + 'a', name_of(obj), id[i].real);
+#endif /* not JAPAN */
+#endif
+	//if ((n = strlen(descs[i])) > maxlen) {
+	if ((n = utf8strlen(descs[i])) > maxlen) {
+	    maxlen = n;
+	}
+    }
+    (void) strcpy(descs[i++], msg);
+
+    col = ROGUE_COLUMNS - (maxlen + 2);
+    for (row = 0; row < i; row++) {
+	if (row > 0) {
+	    for (j = col; j < ROGUE_COLUMNS; j++) {
+		descs[row - 1][j - col] = mvinch_rogue(row, j);
+	    }
+	    descs[row - 1][j - col] = 0;
+	}
+	mvaddstr_rogue(row, col, descs[row]);
+	clrtoeol();
+    }
+    refresh();
+    wait_for_ack();
+
+    move(0, 0);
+    clrtoeol();
+#if defined( COLOR )
+    for (j = 1; j < i; j++) {
+	move(j, col);
+	for (p = descs[j - 1]; *p; p++) {
+	    addch_rogue(*p);
+	}
+    }
+#else /* not COLOR */
+    for (j = 1; j < i; j++) {
+	mvaddstr_rogue(j, col, descs[j - 1]);
+    }
+#endif /* not COLOR */
+}
+#endif
+
+int
+next_party(void)
+{
+    int n;
+
+    n = cur_level;
+    while (n % PARTY_TIME) {
+        n++;
+    }
+    return (get_rand((n + 1), (n + PARTY_TIME)));
+}
+
+/* MZ-700/1500固有 */
+void
+clear_level_objects(void)
+{
+    object *obj = level_objects.next_object;
+    object *next;
+
+    while (obj) {
+        next = obj->next_object;
+        free_object(obj);
+        obj = next;
+    }
+    level_objects.next_object = 0;
 }

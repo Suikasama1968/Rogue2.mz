@@ -256,7 +256,7 @@ def parse_monsters(path, display_values):
         m_char = macro_value(display_values, "DC_A", letter, line_no) + \
             ord(letter) - ord("A")
         records.append(struct.pack(
-            "<IhbhBBhhHhhbbHBHHBBBBBh",
+            "<IhbhBBhhHhhbbHBHHBBBBBBh",
             flags,
             hp, m_char, kill_exp,     # quantity/hp, ichar/m_char, kill_exp
             first_level, last_level, # is_protected/first, is_cursed/last
@@ -265,7 +265,7 @@ def parse_monsters(path, display_values):
             0, 0,                    # row, col
             0, 0,                    # d_enchant, hit_enchant
             0, 0, 0, 0,             # what_is, picked_up, in_use_flags, next
-            0,                       # trail_char
+            0, 0,                    # trail_char, trail_attr
             damage_n1, damage_s1, damage_n2, damage_s2,
             name_id))
     if len(records) != 26:

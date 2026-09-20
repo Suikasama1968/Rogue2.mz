@@ -56,9 +56,9 @@ init(void)
     make_scroll_titles();
     
     level_objects.next_object = 0;
-    level_monsters.next_object = 0;
+    level_monsters.next_monster = 0;
     player_init();
-    party_counter = (short)get_rand(1, PARTY_TIME);
+    party_counter = get_rand(1, PARTY_TIME);
     ring_stats(0);
     return 0;
 }
@@ -101,7 +101,7 @@ player_init(void)
     obj = alloc_object();
     obj->what_is = WEAPON;
     obj->which_kind = ARROW;
-    obj->quantity = (short)get_rand(25, 35);
+    obj->quantity = get_rand(25, 35);
     obj->hit_enchant = 0;
     obj->d_enchant = 0;
     (void)add_to_pack(obj, &rogue.pack, 1);
@@ -113,3 +113,200 @@ byebye(void)
     message_id(12, 0);
     md_exit(0);
 }
+
+#if 0 /* MZ-700/1500では未対応 */
+
+void
+error_save(int sig)
+{
+    save_is_interactive = 0;
+    save_into_file(error_file);
+    clean_up("");
+}
+
+void
+do_args(int argc, char *argv[])
+{
+    int ch;
+    char *option_strings;
+    extern int optind;
+
+#if !defined( ORIGINAL )
+    option_strings = "sr";
+#else /* Not ORIGINAL */
+    option_strings = "s";
+#endif /* ORIGINAL */
+
+    while ((ch = getopt(argc, argv, option_strings)) != EOF) {
+	switch (ch) {
+	case 's':
+	    score_only = 1;
+	    break;
+#if !defined( ORIGINAL )
+	case 'r':
+	    do_restore = 1;
+	    break;
+#endif /* Not ORIGINAL */
+	case '?':
+	default:
+	    usage();
+	    break;
+	}
+    }
+
+    argc -= optind;
+    argv += optind;
+    if (argc >= 3 || argc == 0) {
+	usage();
+	return;
+    }
+
+    if (read_mesg(argv[0])) {
+	exit(1);
+    }
+#if !defined( ORIGINAL )
+    if (argc == 2) {
+	rest_file = argv[1];
+    }
+#endif /* Not ORIGINAL */
+
+}
+
+void
+do_opts(void)
+{
+    char *ep, *p;
+    char envname[10];
+    char envbuf[BUFSIZ];
+
+    strcpy(envname, "ROGUEOPT?");
+    envbuf[0] = 0;
+    for (p = "S123456789"; *p; p++) {
+	envname[8] = *p;
+	if ((ep = getenv(envname))) {
+	    strcat(envbuf, ",");
+	    strcat(envbuf, ep);
+	}
+    }
+    set_opts(envbuf);
+}
+
+void
+set_opts(char *env)
+{
+    short not;
+    char *ep, *p;
+    opt *op;
+    char optname[20];
+
+    if (*env == 0) {
+	return;
+    }
+    ep = env;
+    for (;;) {
+	while (*ep == ' ' || *ep == ',') {
+	    ep++;
+	}
+
+	if (*ep == 0) {
+	    break;
+	}
+
+	not = 0;
+	if (!strncmp("no", ep, 2) || !strncmp("NO", ep, 2)) {
+	    not = 1;
+	    ep += 2;
+	}
+	p = optname;
+	while (*ep && *ep != ',' && *ep != '=' && *ep != ':') {
+	    *p++ = (*ep >= 'A' && *ep <= 'Z') ? (*ep++) - 'A' + 'a' : *ep++;
+	}
+	*p = 0;
+	for (op = envopt; op->name; op++) {
+	    //if (strncmp(op->name, optname, strlen(optname))) {
+	    if (strncmp(op->name, optname, utf8strlen(optname))) {
+		continue;
+	    }
+	    if (op->bp) {
+		*(op->bp) = !not;
+	    }
+	    if (op->cp && (*ep == '=' || *ep == ':')) {
+		env_get_value(op->cp, ep + 1, op->ab, op->nc);
+	    }
+	}
+
+	while (*ep && *ep != ',') {
+	    ep++;
+	}
+    }
+
+#if !defined( ORIGINAL )
+    if (game_dir && *game_dir) {
+	chdir(game_dir);
+    }
+#endif /* Not ORIGINAL */
+}
+
+void
+env_get_value(char **s, char *e, boolean add_blank, boolean no_colon)
+{
+    int i = 0;
+    char *t;
+
+    t = e;
+
+    while ((*e) && (*e != ',')) {
+#if defined( EUC )
+	/* EUC のマルチバイト文字は読み飛ばす */
+	if (*e & 0x80) {
+	    if ((*e >= '\xA1' && *e <= '\xFE')
+		&& (*(e + 1) >= '\xA1' && *(e + 1) <= '\xFE')) {
+		/* 漢字 */
+		e += 2;
+		i += 2;
+	    } else if ((*e == '\x8E')
+		       && ((*(e + 1) >= '\xA0') && (*(e + 1) <= '\xDF'))) {
+		/* 半角カナ */
+		e += 2;
+		i += 2;
+	    } else if ((*e == '\x8F')
+		       && ((*(e + 1) >= '\xA1') && (*(e + 1) <= '\xFE'))
+		       && ((*(e + 2) >= '\xA1') && (*(e + 2) <= '\xFE'))) {
+		/* 補助漢字 */
+		e += 3;
+		i += 3;
+	    } else {
+		/* その他の領域 */
+		e += 1;
+		i += 1;
+	    }
+	    continue;
+	}
+#else /* not EUC */
+	/* Shift JIS のマルチバイト文字は読み飛ばす */
+	//if (*e > '\200' && *e < '\240' || *e >= '\340' && *e < '\360') {
+	//    e += 2;
+	//    i += 2;
+	//    continue;
+	//}
+#endif /* not EUC */
+	if (*e == ':' && no_colon) {
+	    *e = ';';		/* ':' reserved for score file purposes */
+	}
+	e++;
+	if (++i >= 30) {
+	    break;
+	}
+    }
+
+    /* 値入力 */
+    if (!(*s = md_malloc(i + (add_blank ? 2 : 1)))) {
+	clean_up(mesg[17]);
+    }
+    (void) strncpy(*s, t, i);
+    if (add_blank) {
+	(*s)[i++] = ' ';
+    }
+    (*s)[i] = '\0';
+}
+#endif

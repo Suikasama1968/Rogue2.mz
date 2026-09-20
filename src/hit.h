@@ -8,10 +8,15 @@ extern void rogue_damage(short d, object *monster);
 extern int get_damage(char *ds, boolean r);
 extern int get_w_damage(object *obj);
 extern int get_number(char *s);
+#if 0 /* MZ-700/1500では未対応 */
 extern long lget_number(char *s);
+#endif 
 extern int to_hit(object *obj);
 extern int damage_for_strength(void);
 extern int mon_damage(object *monster, int damage);
+#if 0 /* MZ-700/1500では未対応 */
+extern void fight(boolean to_the_death);
+#endif
 extern int get_hit_chance(object *weapon);
 extern int get_weapon_damage(object *weapon);
 extern void show_hit_message(void);

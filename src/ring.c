@@ -34,7 +34,7 @@ put_on_ring(void)
         message_id(160, 0);
         return;
     }
-    if ((ch = (short)pack_letter(0, RING)) == CANCEL) {
+    if ((ch = pack_letter(0, RING)) == CANCEL) {
         return;
     }
     if (!(ring = get_letter_object(ch))) {
@@ -54,7 +54,7 @@ put_on_ring(void)
     } else {
         message_id(158, 0);
         do {
-            ch = (short)rgetchar();
+            ch = rgetchar();
         } while (ch != CANCEL && ch != 'l' && ch != 'r');
         check_message();
     }
@@ -66,7 +66,7 @@ put_on_ring(void)
         message_id(165, 0);
         return;
     }
-    do_put_on(ring, (boolean)(ch == 'l'));
+    do_put_on(ring, ch == 'l');
     ring_stats(1);
     {
         char *desc = (char *)TEMP_BUFFER_ADDR;
@@ -108,7 +108,7 @@ remove_ring(void)
     else {
         message_id(158, 0);
         do {
-            ch = (short)rgetchar();
+            ch = rgetchar();
         } while (ch != CANCEL && ch != 'l' && ch != 'r');
         check_message();
         if (ch == CANCEL) return;
@@ -145,7 +145,7 @@ gr_ring(object *ring, boolean assign_wk)
 {
     ring->what_is = RING;
     if (assign_wk) {
-        ring->which_kind = (unsigned short)get_rand(0, RINGS - 1);
+        ring->which_kind = get_rand(0, RINGS - 1);
     }
     ring->class = 0;
 
@@ -171,8 +171,8 @@ gr_ring(object *ring, boolean assign_wk)
         break;
     case ADD_STRENGTH:
     case DEXTERITY:
-        while ((ring->class = (short)(get_rand(0, 4) - 2)) == 0);
-        ring->is_cursed = (u8)(ring->class < 0);
+        while ((ring->class = get_rand(0, 4) - 2) == 0);
+        ring->is_cursed = ring->class < 0;
         break;
     case ADORNMENT:
         ring->is_cursed = coin_toss();

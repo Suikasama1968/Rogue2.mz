@@ -62,3 +62,12 @@ read_mesg(char *argv_msgfile)
     dzx0_decompress_fastcall((const void *)MESG_LOAD_ADDR,(void *)MESG_ADDR);
     return 0;
 }
+
+#if 0 /* MZ-700/1500では未対応 */
+void
+usage()
+{
+    fprintf(stderr, "usage: %s message_file [options...] [save_file]\n", progname);
+    exit(1);
+}
+#endif

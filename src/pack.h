@@ -18,4 +18,10 @@ extern int pack_count(object *new_obj);
 extern boolean mask_pack(object *pack, unsigned short mask);
 extern int has_amulet(void);
 
+#if 0 /* MZ-700/1500では未対応 */
+extern void call_it(void);
+extern int is_pack_letter(short *c, unsigned short *mask);
+extern void kick_into_pack(void);
+#endif
+
 #endif /* not __PACK_H__ */

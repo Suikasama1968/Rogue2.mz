@@ -16,18 +16,20 @@ srrandom(int seed)
     *(u16 *)XSHIFT = seed ? (u16)seed : 0xace1u;
 }
 
-long
+/* long */
+unsigned short
 rrandom(void) __naked
 {
 __asm
-// 16-bit xorshift Z80 pseudorandom number generator by John Metcalf
+/* 16-bit xorshift Z80 pseudorandom number generator by John Metcalf
 
-// generates 16-bit pseudorandom numbers with a period of 65535
-// using the xorshift method
+   generates 16-bit pseudorandom numbers with a period of 65535
+   using the xorshift method
 
-// XSHFT ^= XSHFT << 7
-// XSHFT ^= XSHFT >> 9
-// XSHFT ^= XSHFT << 8
+   XSHFT ^= XSHFT << 7
+   XSHFT ^= XSHFT >> 9
+   XSHFT ^= XSHFT << 8
+*/
     ld  hl, (XSHIFT)
 
     ld  a, h
@@ -53,7 +55,6 @@ __asm
     ld  h, a
 
     ld  (XSHIFT), hl
-    ld  de, 0
     ret
 __endasm;
 }
@@ -61,7 +62,7 @@ __endasm;
 int
 get_rand(int low, int high)
 {
-    return low + (int)(rrandom() % (long)(high - low + 1));
+    return low + (int)(rrandom() % (unsigned short)(high - low + 1));
 }
 
 int
@@ -73,5 +74,5 @@ rand_percent(int percentage)
 int
 coin_toss(void)
 {
-    return (int)(rrandom() & 0x01L);
+    return (int)(rrandom() & 0x01u);
 }

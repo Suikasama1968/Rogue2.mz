@@ -35,7 +35,7 @@ extern short blind;
 extern short stealthy;
 
 #define mon_tab ((const object *)MONSTER_TABLE_ADDR)
-typedef char monster_object_size_check[sizeof(object) == 37 ? 1 : -1];
+typedef char monster_object_size_check[sizeof(object) == 38 ? 1 : -1];
 
 static int place_monster(short row, short col, boolean wandering);
 
@@ -87,10 +87,10 @@ mv_mons(void)
         return;
     }
 
-    monster = level_monsters.next_object;
+    monster = level_monsters.next_monster;
 
 	while (monster) {
-        next_monster = monster->next_object;
+        next_monster = monster->next_monster;
         if (monster->m_flags & SLOWED) {
             monster->m_flags ^= ALREADY_MOVED;
             if (monster->m_flags & ALREADY_MOVED) {
@@ -130,8 +130,8 @@ party_monsters(int rn, int n)
     n += n;
     while (n-- > 0) {
         for (tries = 0; tries < 100; ++tries) {
-            row = (short)get_rand(rooms[rn].top_row + 1, rooms[rn].bottom_row - 1);
-            col = (short)get_rand(rooms[rn].left_col + 1, rooms[rn].right_col - 1);
+            row = get_rand(rooms[rn].top_row + 1, rooms[rn].bottom_row - 1);
+            col = get_rand(rooms[rn].left_col + 1, rooms[rn].right_col - 1);
             if ((DUNGEON(row,col) == TILE_FLOOR || DUNGEON(row,col) == TILE_TUNNEL) &&
                 !monster_at(row,col)) break;
         }
@@ -149,10 +149,10 @@ mv_monster(object *monster, short row, short col)
 
     if (monster->m_flags & ASLEEP) {
         if (monster->m_flags & NAPPING) {
-            if (monster->d_enchant > 0) {
-                monster->d_enchant--;
+            if (monster->nap_length > 0) {
+                monster->nap_length--;
             }
-            if (monster->d_enchant <= 0) {
+            if (monster->nap_length <= 0) {
                 monster->m_flags &= (~(NAPPING | ASLEEP));
             }
             return;
@@ -194,13 +194,7 @@ mv_monster(object *monster, short row, short col)
     if ((monster->m_flags & SEEKS_GOLD) && seek_gold(monster)) {
         return;
     }
-	dr = rogue.row - monster->row;
-    dc = rogue.col - monster->col;
-    if ((monster->m_flags & FLAMES) &&
-        (dr == 0 || dc == 0 || dr == dc || dr == -dc) &&
-        dr >= -7 && dr <= 7 && dc >= -7 && dc <= 7 &&
-        !coin_toss()) {
-        mon_hit(monster, 0, 1);
+    if ((monster->m_flags & FLAMES) && flame_broil(monster)) {
         return;
     }
     dr = row - monster->row;
@@ -272,7 +266,7 @@ wake_room(short rn, boolean entering, short row, short col)
         wake_percent /= (STEALTH_FACTOR + stealthy);
     }
     
-    monster = level_monsters.next_object;
+    monster = level_monsters.next_monster;
 
     while (monster) {
         if ((monster->m_flags & WAKENS) &&
@@ -280,7 +274,7 @@ wake_room(short rn, boolean entering, short row, short col)
             rand_percent(wake_percent)) {
             monster->m_flags &= ~(ASLEEP | WAKENS);
         }
-        monster = monster->next_object;
+        monster = monster->next_monster;
     }
     (void)entering;
 }
@@ -329,11 +323,31 @@ create_monster(void)
     }
 }
 
+#if 0 /* MZ-700/1500では未対応 */
+void
+aim_monster(object *monster)
+{
+    short i, rn, d, r;
+
+    rn = get_room_number(monster->row, monster->col);
+    r = get_rand(0, 12);
+
+    for (i = 0; i < 4; i++) {
+	d = (r + i) % 4;
+	if (rooms[rn].doors[d].oth_room != NO_ROOM) {
+	    monster->trow = rooms[rn].doors[d].door_row;
+	    monster->tcol = rooms[rn].doors[d].door_col;
+	    break;
+	}
+    }
+}
+#endif
+
 int
 rogue_can_see(int row, int col)
 {
-    short rdif = (short)(row - rogue.row);
-    short cdif = (short)(col - rogue.col);
+    short rdif = row - rogue.row;
+    short cdif = col - rogue.col;
 
     return (!blind && ((cur_room != NO_ROOM &&
              get_room_number(row, col) == cur_room &&
@@ -404,6 +418,45 @@ gr_obj_char(void)
     return rs[r];
 }
 
+boolean
+mon_sees(object *monster, int row, int col)
+{
+    short rn;
+    short rdif;
+    short cdif;
+
+    rn = get_room_number(row, col);
+    if (rn != NO_ROOM &&
+        rn == get_room_number(monster->row, monster->col) &&
+        !(rooms[rn].is_room & R_MAZE)) {
+        return 1;
+    }
+    rdif = row - monster->row;
+    cdif = col - monster->col;
+    return (boolean)(rdif >= -1 && rdif <= 1 &&
+                     cdif >= -1 && cdif <= 1);
+}
+
+#if 0 /* MZ-700/1500では未対応 */
+void
+mv_aquatars(void)
+{
+    object *monster;
+
+    monster = level_monsters.next_monster;
+
+    while (monster) {
+	if ((monster->m_char == 'A') &&
+	    mon_can_go(monster, rogue.row, rogue.col)) {
+	    mv_monster(monster, rogue.row, rogue.col);
+	    monster->m_flags |= ALREADY_MOVED;
+	}
+	monster = monster->next_monster;
+    }
+}
+#endif
+
+/* MZ-700/1500固有 */
 static int place_monster(short row, short col, boolean wandering)
 {
     u8 i, mn;
@@ -413,7 +466,7 @@ static int place_monster(short row, short col, boolean wandering)
     for (i = 0; i < MAX_MONSTERS && monster_used[i]; ++i) {}
     if (i == MAX_MONSTERS) return 0;
     do {
-        mn = (u8)get_rand(0, MONSTERS - 1);
+        mn = get_rand(0, MONSTERS - 1);
         type = &mon_tab[mn];
     } while (cur_level < type->first_level || cur_level > type->last_level ||
              (wandering && !(type->m_flags & (WAKENS | WANDERS))));
@@ -422,8 +475,8 @@ static int place_monster(short row, short col, boolean wandering)
     (void)gr_monster(monster, mn);
     monster->row = row;
     monster->col = col;
-    monster->next_object = level_monsters.next_object;
-    level_monsters.next_object = monster;
+    monster->next_monster = level_monsters.next_monster;
+    level_monsters.next_monster = monster;
     return 1;
 }
 
@@ -431,7 +484,7 @@ void clear_level_monsters(void)
 {
     u8 i;
 
-    level_monsters.next_object = 0;
+    level_monsters.next_monster = 0;
     i = MAX_MONSTERS - 1;
     do {
         monster_used[i] = 0;
@@ -448,10 +501,10 @@ void remove_monster(object *monster)
     object *prev = &level_monsters;
     u8 i;
 
-    while (prev->next_object && prev->next_object != monster) {
-        prev = prev->next_object;
+    while (prev->next_monster && prev->next_monster != monster) {
+        prev = prev->next_monster;
     }
-    if (prev->next_object == monster) prev->next_object = monster->next_object;
+    if (prev->next_monster == monster) prev->next_monster = monster->next_monster;
     for (i = 0; i < MAX_MONSTERS; i++) {
         if (monster == &monster_pool[i]) {
             monster_used[i] = 0;

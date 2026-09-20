@@ -18,8 +18,14 @@ extern void mv_monster(object *monster, short row, short col);
 extern int mtry(object *monster, short row, short col);
 extern void move_mon_to(object *monster, short row, short col);
 extern int mon_can_go(object *monster, short row, short col);
+extern boolean mon_sees(object *monster, int row, int col);
 extern void wake_up(object *monster);
 extern int move_confused(object *monster);
 extern int flit(object *monster);
+
+#if 0 /* MZ-700/1500では未対応 */
+extern void aim_monster(object *monster);
+extern void mv_aquatars(void);
+#endif
 
 #endif /* not __MONSTER_H__ */

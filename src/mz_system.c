@@ -1,7 +1,7 @@
 /*
  * mz_system.c
  *
- * システム制御関数 for MZ-1500
+ * システム制御関数 for MZ-700/1500
  * Copyright (c) 2026 Suikasama1968
  */
 

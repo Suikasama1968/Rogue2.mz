@@ -11,4 +11,10 @@ extern void rest(int count);
 extern int gr_dir(void);
 extern void heal(void);
 
+#if 0 /* MZ-700/1500では未対応 */
+extern void multiple_move_rogue(int dirch);
+extern int next_to_something(int drow, int dcol);
+extern void move_onto(void);
+#endif
+
 #endif /* not __MOVE_H__ */

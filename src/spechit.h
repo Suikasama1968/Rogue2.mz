@@ -2,6 +2,7 @@
 #define __SPECHIT_H__
 
 extern void special_hit(object *monster);
+extern int flame_broil(object *monster);
 extern void rust(object *monster);
 extern void freeze(object *monster);
 extern void sting(object *monster);

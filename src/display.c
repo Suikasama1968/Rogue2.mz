@@ -1,6 +1,6 @@
 /*
  * display.c
- * MZ-1500用の表示系ラッパー関数を定義する
+ * MZ-700/1500用の表示系ラッパー関数を定義する
  */
 
 #include "rogue.h"
@@ -129,14 +129,14 @@ void refresh_dungeon(void)
                     DUNGEON(obj->row, obj->col));
         }
     }
-    for (obj = level_monsters.next_object; obj; obj = obj->next_object) {
+    for (obj = level_monsters.next_monster; obj; obj = obj->next_monster) {
         if (!blind && (detect_monster || rogue_can_see(obj->row, obj->col)) &&
             (!(obj->m_flags & INVISIBLE) || detect_monster || see_invisible ||
              r_see_invisible)) {
             attrset(COLOR_PAIR((obj->m_flags & IMITATES) ?
                                PAIR_OBJECT : PAIR_MONSTER));
             obj->trail_char = DUNGEON(obj->row, obj->col);
-            obj->picked_up = DUNGEON_ATTR(obj->row, obj->col);
+            obj->trail_attr = DUNGEON_ATTR(obj->row, obj->col);
             mvaddch((u8)obj->row, (u8)obj->col,
                     halluc ? (u8)(DC_A + get_rand(0, MONSTERS - 1)) :
                     ((obj->m_flags & IMITATES) ?
@@ -150,12 +150,12 @@ void refresh_dungeon(void)
     refresh();
     DUNGEON(rogue.row, rogue.col) = tile;
     DUNGEON_ATTR(rogue.row, rogue.col) = attr;
-    for (obj = level_monsters.next_object; obj; obj = obj->next_object) {
+    for (obj = level_monsters.next_monster; obj; obj = obj->next_monster) {
         if (!blind && (detect_monster || rogue_can_see(obj->row, obj->col)) &&
             (!(obj->m_flags & INVISIBLE) || detect_monster || see_invisible ||
              r_see_invisible)) {
             DUNGEON(obj->row, obj->col) = obj->trail_char;
-            DUNGEON_ATTR(obj->row, obj->col) = (u8)obj->picked_up;
+            DUNGEON_ATTR(obj->row, obj->col) = obj->trail_attr;
         }
     }
     for (obj = level_objects.next_object; obj; obj = obj->next_object) {

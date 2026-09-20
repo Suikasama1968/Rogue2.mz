@@ -1,7 +1,7 @@
 /*
  * mz_curses.c
  *
- * 簡易版Unix CURSES互換関数 for MZ-1500
+ * 簡易版Unix CURSES互換関数 for MZ-700/1500
  *  文字コードはMZ-700/1500のディスプレイコードを指定する
  *  エラーハンドリングは行わない
  * Copyright (c) 2026 Suikasama1968
@@ -81,6 +81,7 @@ int clrtoeol(void)
 /*
     現在のカーソル位置からすべての行をスペースで埋める
 */
+#if 0 /* Rogue2では未使用 */
 int clrtobot(void)
 {
     u8 *addr = main_window._cur_addr;
@@ -90,6 +91,8 @@ int clrtobot(void)
     memset(attr, 0x70, 0xd000 - (u16)attr);
     return 0;
 }
+#endif
+
 /*
     カーソルを移動する
 */
@@ -103,7 +106,7 @@ int move(u8 y, u8 x)
 }
 /*
     ウィンドウの現在の位置に文字を一文字書く 
-    chにはMZ-1500のディスプレイコードを指定する
+    chにはMZ-700/1500のディスプレイコードを指定する
     上位8bitはアトリビュート、下位8bitは文字コード
     指定方法 
      文字だけの場合:addch(DC_A) のように指定する
@@ -126,7 +129,7 @@ int addch(u16 ch)
 }
 /*
     カーソル位置を指定して文字を画面に書く
-    chにはMZ-1500のディスプレイコードを指定する
+    chにはMZ-700/1500のディスプレイコードを指定する
 */
 int mvaddch(u8 y, u8 x, u16 ch)
 {
@@ -261,7 +264,7 @@ static void wait_key_release(void)
 
 /* 
     入力バッファの破棄
-    MZ-1500の場合入力待ちへ移る前に、現在押されている文字キーが離されるまで待つ。 
+    MZ-700/1500の場合入力待ちへ移る前に、現在押されている文字キーが離されるまで待つ。 
 */
 int flushinp(void)
 {

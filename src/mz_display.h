@@ -1,7 +1,7 @@
 /*
  * mz_display.h
  *
- * 簡易版DISPLAYライブラリ for MZ-1500
+ * 簡易版DISPLAYライブラリ for MZ-700/1500
  * すねいる氏のライブラリを流用して作成
  * Copyright (c) 2026 Suikasama1968
  */
@@ -276,7 +276,7 @@ extern "C" {
 
 extern u8 mz_display_length(const u8 *);
 extern u8 mz_number(u8 *, unsigned long);
-extern int mz_sprintf(u8 *, short, const long *);
+extern void mz_sprintf(u8 *, short, const long *);
 
 #ifdef __cplusplus
 }

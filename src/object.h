@@ -30,4 +30,9 @@ extern void make_party(void);
 extern int next_party(void);
 extern unsigned short identified_potions;
 
+#if 0 /* MZ-700/1500では未対応 */
+extern void new_object_for_wizard(void);
+extern void list_object(object *obj, short max);
+#endif
+
 #endif /* not __OBJECT_H__ */

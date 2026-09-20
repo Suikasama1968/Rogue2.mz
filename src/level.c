@@ -82,9 +82,8 @@ make_level(void)
     }
 
     for (i = 0; i < MAXROOMS; ++i) {
-        make_room((short)i, (short)must_exist1, (short)must_exist2,
-                  (short)must_exist3);
-        random_rooms[i] = (u8)i;
+        make_room(i, must_exist1, must_exist2, must_exist3);
+        random_rooms[i] = i;
     }
 
     add_mazes();
@@ -93,20 +92,20 @@ make_level(void)
         j = get_rand(i, MAXROOMS - 1);
         t = random_rooms[i];
         random_rooms[i] = random_rooms[j];
-        random_rooms[j] = (u8)t;
+        random_rooms[j] = t;
     }
 
     for (j = 0; j < MAXROOMS; ++j) {
         i = random_rooms[j];
-        if (i < MAXROOMS - 1) connect_rooms((short)i, (short)(i + 1));
-        if (i < MAXROOMS - 3) connect_rooms((short)i, (short)(i + 3));
+        if (i < MAXROOMS - 1) connect_rooms(i, i + 1);
+        if (i < MAXROOMS - 3) connect_rooms(i, i + 3);
         if (i < MAXROOMS - 2 && !room_exists[i + 1] &&
             (i + 1 != 4 || vertical)) {
-            connect_rooms((short)i, (short)(i + 2));
+            connect_rooms(i, i + 2);
         }
         if (i < MAXROOMS - 6 && !room_exists[i + 3] &&
             (i + 3 != 4 || !vertical)) {
-            connect_rooms((short)i, (short)(i + 6));
+            connect_rooms(i, i + 6);
         }
         if (is_all_connected()) break;
     }
@@ -312,12 +311,12 @@ put_door(room *rm, short dir, short *row, short *col)
     case UPWARD:
     case DOWN:
         *row = (dir == UPWARD) ? rm->top_row : rm->bottom_row;
-        *col = (short)get_rand(rm->left_col + 1, rm->right_col - 1);
+        *col = get_rand(rm->left_col + 1, rm->right_col - 1);
         break;
     case RIGHT:
     case LEFT:
         *col = (dir == LEFT) ? rm->left_col : rm->right_col;
-        *row = (short)get_rand(rm->top_row + 1, rm->bottom_row - 1);
+        *row = get_rand(rm->top_row + 1, rm->bottom_row - 1);
         break;
     }
     DUNGEON(*row, *col) = TILE_DOOR;
@@ -336,7 +335,7 @@ draw_simple_passage(short row1, short col1, short row2, short col2, short dir)
             swap(row1, row2);
             swap(col1, col2);
         }
-        middle = (short)get_rand(col1 + 1, col2 - 1);
+        middle = get_rand(col1 + 1, col2 - 1);
         for (i = col1 + 1; i != middle; i++) {
             DUNGEON(row1, i) = TILE_TUNNEL;
         }
@@ -351,7 +350,7 @@ draw_simple_passage(short row1, short col1, short row2, short col2, short dir)
             swap(row1, row2);
             swap(col1, col2);
         }
-        middle = (short)get_rand(row1 + 1, row2 - 1);
+        middle = get_rand(row1 + 1, row2 - 1);
         for (i = row1 + 1; i != middle; i++) {
             DUNGEON(i, col1) = TILE_TUNNEL;
         }
@@ -388,12 +387,12 @@ add_mazes(void)
     room *rm;
 
     if (cur_level <= 1) return;
-    start = (short)get_rand(0, MAXROOMS - 1);
-    maze_percent = (short)((cur_level * 5) / 4);
+    start = get_rand(0, MAXROOMS - 1);
+    maze_percent = (cur_level * 5) / 4;
     if (cur_level > 15) maze_percent += cur_level;
 
     for (i = 0; i < MAXROOMS; i++) {
-        j = (short)((start + i) % MAXROOMS);
+        j = (start + i) % MAXROOMS;
         if (room_exists[j] || !rand_percent(maze_percent)) continue;
 
         lc = (j % 3 == 0) ? 0 : ((j % 3 == 1) ? COL1 + 1 : COL2 + 1);
@@ -408,10 +407,29 @@ add_mazes(void)
         rm->center_col = (u8)((lc + rc) / 2);
         rm->is_room = R_MAZE;
         room_exists[j] = 1;
-        make_maze((short)get_rand(tr, br), (short)get_rand(lc, rc),
+        make_maze(get_rand(tr, br), get_rand(lc, rc),
                   tr, br, lc, rc);
     }
 }
+
+#if 0 
+boolean
+mask_room(short rn, short *row, short *col, unsigned short mask)
+{
+    short i, j;
+
+    for (i = rooms[rn].top_row; i <= rooms[rn].bottom_row; i++) {
+	for (j = rooms[rn].left_col; j <= rooms[rn].right_col; j++) {
+	    if (dungeon[i][j] & mask) {
+		*row = i;
+		*col = j;
+		return 1;
+	    }
+	}
+    }
+    return 0;
+}
+#endif
 
 void
 make_maze(short r, short c, short tr, short br, short lc, short rc)
@@ -509,6 +527,43 @@ next_direction:
     goto next_direction;
 }
 
+#if 0 /* MZ-700/1500では未対応 */
+void
+hide_boxed_passage(short row1, short col1, short row2, short col2, short n)
+{
+    short i, j, t;
+    short row, col, row_cut, col_cut;
+    short h, w;
+
+    if (cur_level > 2) {
+	if (row1 > row2) {
+	    swap(row1, row2);
+	}
+	if (col1 > col2) {
+	    swap(col1, col2);
+	}
+	h = row2 - row1;
+	w = col2 - col1;
+
+	if ((w >= 5) || (h >= 5)) {
+	    row_cut = ((h >= 2) ? 1 : 0);
+	    col_cut = ((w >= 2) ? 1 : 0);
+
+	    for (i = 0; i < n; i++) {
+		for (j = 0; j < 10; j++) {
+		    row = get_rand(row1 + row_cut, row2 - row_cut);
+		    col = get_rand(col1 + col_cut, col2 - col_cut);
+		    if (dungeon[row][col] == TUNNEL) {
+			dungeon[row][col] |= HIDDEN;
+			break;
+		    }
+		}
+	    }
+	}
+    }
+}
+#endif
+
 void put_player(short nr)
 {
     short rn = nr, misses;
@@ -519,7 +574,7 @@ void put_player(short nr)
         do {
             gr_row_col(&row, &col, FLOOR | TUNNEL | STAIRS);
         } while (trap_at(row, col) != NO_TRAP);
-        rn = (short)get_room_number(row, col);
+        rn = get_room_number(row, col);
     }
     rogue.row = row;
     rogue.col = col;
@@ -578,11 +633,11 @@ add_exp(int e, boolean promotion)
     if (rogue.exp_points > MAX_EXP) {
         rogue.exp_points = MAX_EXP + 1;
     }
-    new_exp = (short)get_exp_level(rogue.exp_points);
+    new_exp = get_exp_level(rogue.exp_points);
     while (rogue.exp < new_exp) {
         ++rogue.exp;
         if (promotion) {
-            hp = (short)hp_raise();
+            hp = hp_raise();
             rogue.hp_current += hp;
             rogue.hp_max += hp;
         }
@@ -613,3 +668,28 @@ hp_raise(void)
     hp = get_rand(3, 10);
     return hp;
 }
+
+#if 0 /* MZ-700/1500では未対応 */
+
+void
+show_average_hp(void)
+{
+    char mbuf[80];
+    long real_average;
+    long effective_average;
+
+    if (rogue.exp == 1) {
+	real_average = effective_average = 0L;
+    } else {
+	real_average = ((rogue.hp_max - extra_hp - INIT_HP) + less_hp)
+	    * 100L / (rogue.exp - 1);
+	effective_average = (rogue.hp_max - INIT_HP)
+	    * 100L / (rogue.exp - 1);
+    }
+    sprintf(mbuf, mesg[54],
+	    (int) (real_average / 100L), (int) (real_average % 100L),
+	    (int) (effective_average / 100L), (int) (effective_average % 100L),
+	    extra_hp, less_hp);
+    message(mbuf, 0);
+}
+#endif

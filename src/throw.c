@@ -35,12 +35,12 @@ throw(void)
     object *monster;
     u8 *prompt = (u8 *)TEMP_BUFFER_ADDR;
 
-    dir = (short)get_direction();
+    dir = get_direction();
 	if (dir == CANCEL) {
 		return;
 	}
     get_message(210, prompt, 24);
-	if ((wch = (short)pack_letter((char *)prompt, WEAPON)) == CANCEL) {
+	if ((wch = pack_letter((char *)prompt, WEAPON)) == CANCEL) {
 		return;
 	}
     check_message();
@@ -61,6 +61,7 @@ throw(void)
     if (monster) {
         wake_up(monster);
         check_gold_seeker(monster);
+
         if (!throw_at_monster(monster, weapon)) {
             flop_weapon(weapon, row, col);
         }
@@ -76,18 +77,18 @@ throw_at_monster(object *monster, object *weapon)
 {
     short damage, hit_chance;
 
-    hit_chance = (short)get_hit_chance(weapon);
-    damage = (short)get_weapon_damage(weapon);
+    hit_chance = get_hit_chance(weapon);
+    damage = get_weapon_damage(weapon);
     if (weapon->which_kind == ARROW && rogue.weapon &&
         rogue.weapon->which_kind == BOW) {
-        damage += (short)get_weapon_damage(rogue.weapon);
-        damage = (short)((damage * 2) / 3);
+        damage += get_weapon_damage(rogue.weapon);
+        damage = (damage * 2) / 3;
         hit_chance += hit_chance / 3;
     } else if ((weapon->in_use_flags & BEING_WIELDED) &&
                (weapon->which_kind == DAGGER ||
                 weapon->which_kind == SHURIKEN ||
                 weapon->which_kind == DART)) {
-        damage = (short)((damage * 3) / 2);
+        damage = (damage * 3) / 2;
         hit_chance += (hit_chance / 3);
     }
     if (!rand_percent(hit_chance)) {
@@ -107,8 +108,7 @@ get_thrown_at_monster(object *obj, short dir, short *row, short *col)
     u8 i;
     u8 tile;
 
-    i = 0;
-    do {    /* z88dk メモリ削減対策(while->doに変更) */
+    for (i = 0; i < 24; i++) {
         get_dir_rc(dir, row, col, 0);
         if ((*row == old_row && *col == old_col) ||
             !is_passable(*row, *col)) {
@@ -129,7 +129,7 @@ get_thrown_at_monster(object *obj, short dir, short *row, short *col)
         old_row = *row;
         old_col = *col;
         if (DUNGEON(*row, *col) == TILE_TUNNEL) i += 2;
-    } while (++i < 24);
+    }
     (void)obj;
     return 0;
 }
@@ -140,8 +140,7 @@ flop_weapon(object *weapon, short row, short col)
     object *new_weapon;
     u8 i;
 
-    i = 0;
-    do {    /* z88dk メモリ削減対策(while->doに変更) */
+    for (i = 0; i < 9; i++) {
         short r = row;
         short c = col;
 
@@ -159,7 +158,7 @@ flop_weapon(object *weapon, short row, short col)
         new_weapon->next_object = 0;
         place_at(new_weapon, r, c);
         return;
-    } while (++i < 9);
+    }
     message_id(215, 0);
 }
 
@@ -178,21 +177,66 @@ rand_around(short i, short *r, short *c)
         row = *r;
         col = *c;
 
-        o = (short)get_rand(1, 8);
+        o = get_rand(1, 8);
+        
         for (j = 0; j < 5; j++) {
-            x = (short)(get_rand(0, 8) % 9);
-            y = (short)((x + o) % 9);
+            x = get_rand(0, 8) % 9;
+            y = (x + o) % 9;
             t = pos[x];
             pos[x] = pos[y];
-            pos[y] = (char)t;
+            pos[y] = t;
         }
     }
-    j = (short)(pos[i] % 9);
+    j = pos[i] % 9;
     *r = row + ra[j];
     *c = col + ca[j];
 }
 
-/* MZ-1500固有の処理 */
+#if 0 /* MZ-700/1500では未対応 */
+void
+potion_monster(object *monster, unsigned short kind)
+{
+    short maxhp;
+
+    maxhp = mon_tab[monster->m_char - 'A'].hp_to_kill;
+
+    switch (kind) {
+    case RESTORE_STRENGTH:
+    case LEVITATION:
+    case HALLUCINATION:
+    case DETECT_MONSTER:
+    case DETECT_OBJECTS:
+    case SEE_INVISIBLE:
+	break;
+    case EXTRA_HEALING:
+	monster->hp_to_kill += (maxhp - monster->hp_to_kill) * 2 / 3;
+	break;
+    case INCREASE_STRENGTH:
+    case HEALING:
+    case RAISE_LEVEL:
+	monster->hp_to_kill += (maxhp - monster->hp_to_kill) / 5;
+	break;
+    case POISON:
+	mon_damage(monster, (monster->hp_to_kill / 4 + 1));
+	break;
+    case BLINDNESS:
+	monster->m_flags |= (ASLEEP | WAKENS);
+	break;
+    case CONFUSION:
+	monster->m_flags |= CONFUSED;
+	monster->moves_confused += get_rand(12, 22);
+	break;
+    case HASTE_SELF:
+	if (monster->m_flags & SLOWED)
+	    monster->m_flags &= (~SLOWED);
+	else
+	    monster->m_flags |= HASTED;
+	break;
+    }
+}
+#endif
+
+/* MZ-700/1500固有 */
 static void
 consume_thrown_weapon(object *weapon)
 {

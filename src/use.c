@@ -40,7 +40,7 @@ quaff(void)
     short ch;
     object *obj;
 
-    ch = (short)pack_letter(0, POTION);
+    ch = pack_letter(0, POTION);
     if (ch == CANCEL){
         return;
     }
@@ -74,7 +74,7 @@ quaff(void)
         break;
     case POISON:
         if (!sustain_strength) {
-            rogue.str_current -= (short)get_rand(1, 3);
+            rogue.str_current -= get_rand(1, 3);
             if (rogue.str_current < 1) {
                 rogue.str_current = 1;
             }
@@ -97,7 +97,7 @@ quaff(void)
         break;
     case DETECT_MONSTER:
         show_monsters();
-        if (!(level_monsters.next_object)) {
+        if (!(level_monsters.next_monster)) {
             message_id(230, 0);
         }
         break;
@@ -148,7 +148,7 @@ read_scroll(void)
     object *monster;
     object *scroll;
 
-    ch = (short)pack_letter(0, SCROL);
+    ch = pack_letter(0, SCROL);
 
     if (ch == CANCEL) {
         return;
@@ -167,8 +167,8 @@ read_scroll(void)
         message_id(248, 0);
         break;
     case HOLD_MONSTER:
-        for (monster = level_monsters.next_object; monster;
-             monster = monster->next_object) monster->m_flags |= ASLEEP;
+        for (monster = level_monsters.next_monster; monster;
+             monster = monster->next_monster) monster->m_flags |= ASLEEP;
         message_id(269, 0);
         break;
     case ENCH_WEAPON:
@@ -198,7 +198,7 @@ read_scroll(void)
         break;
     case SLEEP:
         message_id(254, 0);
-        rest(get_rand(3, 6));
+        take_a_nap();
         break;
     case PROTECT_ARMOR:
         if (rogue.armor) {
@@ -216,8 +216,8 @@ read_scroll(void)
         create_monster();
         break;
     case AGGRAVATE_MONSTER:
-        for (monster = level_monsters.next_object; monster;
-             monster = monster->next_object) monster->m_flags &= ~ASLEEP;
+        for (monster = level_monsters.next_monster; monster;
+             monster = monster->next_monster) monster->m_flags &= ~ASLEEP;
         message_id(248, 0);
         break;
     case MAGIC_MAPPING:
@@ -234,7 +234,7 @@ read_scroll(void)
     if (id_scrolls[scroll->which_kind].id_status != CALLED) {
         id_scrolls[scroll->which_kind].id_status = IDENTIFIED;
     }
-    vanish(scroll, (short)(scroll->which_kind != SLEEP), &rogue.pack);
+    vanish(scroll, scroll->which_kind != SLEEP, &rogue.pack);
 }
 
 void
@@ -276,7 +276,7 @@ potion_heal(int extra)
         if (extra) {
             ratio += ratio;
         }
-        add = (short)(ratio * (rogue.hp_max - rogue.hp_current) / 100L);
+        add = ratio * (rogue.hp_max - rogue.hp_current) / 100L;
         rogue.hp_current += add;
         if (rogue.hp_current > rogue.hp_max) {
             rogue.hp_current = rogue.hp_max;
@@ -307,7 +307,7 @@ idntfy(void)
     const u8 *prompt = find_message(260, &length);
 
 AGAIN:
-    ch = (short)pack_letter((char *)prompt, ALL_OBJECTS);
+    ch = pack_letter((char *)prompt, ALL_OBJECTS);
     if (ch == CANCEL) {
         return;
     }
@@ -355,10 +355,10 @@ eat(void)
         return;
     }
     if (obj->which_kind == FRUIT || rand_percent(60)) {
-        moves = (short)get_rand(900, 1100);
-        message_id((short)(obj->which_kind == RATION ? 266 : 267), 0);
+        moves = get_rand(900, 1100);
+        message_id(obj->which_kind == RATION ? 266 : 267, 0);
     } else {
-        moves = (short)get_rand(700, 900);
+        moves = get_rand(700, 900);
         message_id(268, 0);
         add_exp(2, 1);
     }
@@ -374,7 +374,7 @@ tele(void)
     if (cur_room >= 0) {
         darken_room(cur_room);
     }
-    put_player((short)get_room_number(rogue.row, rogue.col));
+    put_player(get_room_number(rogue.row, rogue.col));
     being_held = 0;
     bear_trap = 0;
 }
@@ -401,17 +401,29 @@ relight(void)
     else light_up_room(cur_room);
 }
 
+void
+take_a_nap(void)
+{
+    short i;
+
+    i = get_rand(2, 5);
+    while (i--) {
+        mv_mons();
+    }
+    message_id(66, 0);
+}
+
 void go_blind(void)
 {
     if (!blind) message_id(274, 0);
-    blind += (short)get_rand(500, 800);
+    blind += get_rand(500, 800);
     if (cur_room >= 0) darken_room(cur_room);
 }
 
 void
 confuse(void)
 {
-    confused += (short)get_rand(12, 22);
+    confused += get_rand(12, 22);
 }
 
 void
