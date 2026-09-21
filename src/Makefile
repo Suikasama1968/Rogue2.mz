@@ -29,7 +29,7 @@ MONSTER_SOURCE = mz_monster
 MESSAGE_TOOL   = tools/mkmessage.py
 ZX0_TOOL = ZX0-main/src/zx0.exe
 
-INCLUDE = mz_common.h rogue.h main.h init.h level.h room.h move.h hit.h display.h message.h invent.h use.h trap.h score.h \
+INCLUDE = rogue.h main.h init.h level.h room.h move.h hit.h display.h message.h invent.h use.h trap.h score.h \
 	random.h object.h pack.h monster.h spechit.h throw.h zap.h ring.h \
 	play.h machdep.h mz_curses.h mz_display.h mz_system.h mz_io.h
 

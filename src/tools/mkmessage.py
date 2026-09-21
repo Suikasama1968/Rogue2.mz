@@ -69,7 +69,7 @@ MESSAGE_CSET_1 = 0xCE
 MESSAGE_CSET_0 = 0xCF
 MZT_HEADER_SIZE = 128
 MZT_ATTRIBUTE_MACHINE_CODE = 0x01
-MONSTER_RECORD_SIZE = 38
+MONSTER_RECORD_SIZE = 36
 
 LEVEL_POINTS = (
     10, 20, 40, 80, 160, 320, 640, 1300, 2600, 5200,
@@ -247,27 +247,36 @@ def parse_monsters(path, display_values):
             int(value, 0) for value in fields[3:]
         )
         damage_n1, damage_s1, damage_n2, damage_s2 = parse_damage(damage, line_no)
-        byte_values = (hp, first_level, last_level, hit_chance, drop_percent,
-                       damage_n1, damage_s1, damage_n2, damage_s2)
+        byte_values = (hp, first_level, last_level, hit_chance, drop_percent)
         if any(value < 0 or value > 255 for value in byte_values):
             raise ValueError(f"monster line {line_no}: byte value out of range")
-        if not 0 <= kill_exp <= 65535 or not 0 <= name_id <= 65535:
+        damage_values = (damage_n1, damage_s1, damage_n2, damage_s2)
+        if any(value < 0 or value > 15 for value in damage_values):
+            raise ValueError(f"monster line {line_no}: damage value does not fit in 4 bits")
+        if not 0 <= kill_exp <= 65535:
             raise ValueError(f"monster line {line_no}: word value out of range")
+        expected_name_id = 307 + len(records)
+        if name_id != expected_name_id:
+            raise ValueError(
+                f"monster line {line_no}: name id must be {expected_name_id}")
+        packed_damage = (damage_n1 | (damage_s1 << 4) |
+                         (damage_n2 << 8) | (damage_s2 << 12))
         m_char = macro_value(display_values, "DC_A", letter, line_no) + \
             ord(letter) - ord("A")
-        records.append(struct.pack(
-            "<IhbhBBhhHhhbbHBHHBBBBBBh",
-            flags,
+        record = struct.pack(
+            "<IHhbhBBhhHhhbhbHBHHBB",
+            flags, packed_damage,
             hp, m_char, kill_exp,     # quantity/hp, ichar/m_char, kill_exp
             first_level, last_level, # is_protected/first, is_cursed/last
             hit_chance, 0,           # class/m_hit_chance, identified
             drop_percent,            # which_kind/drop_percent
             0, 0,                    # row, col
-            0, 0,                    # d_enchant, hit_enchant
+            0, 0, 0,                 # d_enchant, quiver, hit_enchant
             0, 0, 0, 0,             # what_is, picked_up, in_use_flags, next
-            0, 0,                    # trail_char, trail_attr
-            damage_n1, damage_s1, damage_n2, damage_s2,
-            name_id))
+            0, 0)                    # trail_char, trail_attr
+        if len(record) != MONSTER_RECORD_SIZE:
+            raise ValueError("internal monster record size mismatch")
+        records.append(record)
     if len(records) != 26:
         raise ValueError(f"monster table has {len(records)} records (expected 26)")
     return bytearray(b"".join(records))

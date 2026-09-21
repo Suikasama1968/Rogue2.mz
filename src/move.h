@@ -10,6 +10,7 @@ extern boolean reg_move(void);
 extern void rest(int count);
 extern int gr_dir(void);
 extern void heal(void);
+extern void reset_move_state(void);
 
 #if 0 /* MZ-700/1500では未対応 */
 extern void multiple_move_rogue(int dirch);

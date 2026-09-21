@@ -17,7 +17,7 @@
 # include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include "mz_common.h"
+#include <stdint.h>
 #include "mz_display.h"
 #include "mz_system.h"
 
@@ -171,6 +171,7 @@ struct id
  * Ideally, this should be handled by some kind of union structure.
  */
 #define hp_to_kill       quantity
+#define m_damage         damage
 #define m_char           ichar
 #define first_level      is_protected
 #define last_level       is_cursed
@@ -178,41 +179,37 @@ struct id
 #define stationary_damage identified
 #define drop_percent     which_kind
 #define moves_confused   hit_enchant
-#define nap_length       d_enchant
+#define nap_length       picked_up
 #define disguise         what_is
+#define slowed_toggle    quiver
 #define next_monster     next_object
 
 struct obj
 {				/* comment is monster meaning */
     unsigned long m_flags;	/* monster flags */
-/*  char *damage; */		/* damage it does */
+    uint16_t damage;		/* MZ-700/1500: packed monster damage */
     short quantity;	    	/* hit points to kill */
     char ichar;		        /* 'A' is for aquatar */
     short kill_exp;         /* exp for killing it */
-    u8 is_protected;        /* level starts */
-    u8 is_cursed;           /* level ends */
+    uint8_t is_protected;        /* level starts */
+    uint8_t is_cursed;           /* level ends */
     short class;            /* chance of hitting you */
     short identified;		/* 'F' damage, 1,2,3... */
     unsigned short which_kind;	/* item carry/drop % */
 /*  short o_row, o_col, o;*//* o is how many times stuck at o_row, o_col */
     short row, col;         /* current row, col */
-    s8 d_enchant;           /* room char when detect_monster */
-/*  short quiver; */		/* monster slowed toggle */
+    int8_t d_enchant;           /* room char when detect_monster */
+    short quiver;		/* monster slowed toggle */
 /* short trow, tcol;*/		/* target row, col */
-    s8 hit_enchant;         /* how many moves is confused */
+    int8_t hit_enchant;         /* how many moves is confused */
     unsigned short what_is;	/* imitator's charactor (?!%: */
-    u8 picked_up;		    /* sleep from wand of sleep */
+    uint8_t picked_up;		    /* sleep from wand of sleep */
     unsigned short in_use_flags;
     struct obj *next_object;/* next monster */
 
-    /* MZ-700/MZ-1500 固有*/
-    u8 trail_char;
-    u8 trail_attr;
-    u8 m_damage_n1;
-    u8 m_damage_s1;
-    u8 m_damage_n2;
-    u8 m_damage_s2;
-    short m_name_id;
+    /* MZ-700/1500固有 */
+    uint8_t trail_char;
+    uint8_t trail_attr;
 };
 
 typedef struct obj object;
@@ -247,12 +244,12 @@ struct dr {
 typedef struct dr door;
 
 struct rm {
-    u8 bottom_row, right_col, left_col, top_row;
+    uint8_t bottom_row, right_col, left_col, top_row;
     door doors[4];
     unsigned short is_room;
 
     /* MZ-700/1500固有 */
-    u8 center_row, center_col;
+    uint8_t center_row, center_col;
 };
 
 typedef struct rm room;
@@ -305,16 +302,16 @@ struct tr {
 typedef struct tr trap;
 
 extern fighter rogue;
-extern u8 *dungeon;
-extern u8 *dungeon_attr;
-#define room_exists ((u8 *)ROOM_EXISTS_ADDR)
+extern uint8_t *dungeon;
+extern uint8_t *dungeon_attr;
+#define room_exists ((uint8_t *)ROOM_EXISTS_ADDR)
 extern short cur_level;
 extern short max_level;
 extern short cur_room;
 extern short party_room;
 extern short party_counter;
-extern u8 stairs_row;
-extern u8 stairs_col;
+extern uint8_t stairs_row;
+extern uint8_t stairs_col;
 extern char hunger_str[8];
 #define level_objects (*(object *)LEVEL_OBJECTS_ADDR)
 #define level_monsters (*(object *)LEVEL_MONSTERS_ADDR)

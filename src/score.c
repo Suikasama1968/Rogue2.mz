@@ -10,8 +10,10 @@
  *
  */
 #include "rogue.h"
+#include "main.h"
 #include "machdep.h"
 #include "message.h"
+#include "monster.h"
 #include "pack.h"
 #include "score.h"
 #include "mz_curses.h"
@@ -26,12 +28,12 @@ killed_by(object *monster, short other)
     print_stats(STAT_HP);
     return;
 #else
-    u8 reason[40];
+    uint8_t reason[40];
     short length;
     short suffix_length;
     short i;
-    u8 text[40];
-    u8 stats[48];
+    uint8_t text[40];
+    uint8_t stats[48];
     long values[3];
 
     rogue.hp_current = 0;
@@ -41,7 +43,7 @@ killed_by(object *monster, short other)
     /* メッセージをファイル化 */
     for ( i = 0; i < 14; i++) {
         (void)get_message(500 + i, text, sizeof(text));
-        mvaddstr((u8)(i + 3), 5, text);
+        mvaddstr((uint8_t)(i + 3), 5, text);
     }
 
     length = 0;
@@ -53,7 +55,8 @@ killed_by(object *monster, short other)
     if (other){
         length = get_message(167 + other, reason, sizeof(reason));
     }else{
-        length = get_message(monster->m_name_id, reason, sizeof(reason));
+        length = get_message(get_monster_name_id(monster), reason,
+                             sizeof(reason));
         suffix_length = get_message(176, reason + length,
                                     sizeof(reason) - length);
         if (suffix_length > 0 && reason[length] == MESSAGE_FORMAT_STRING) {
@@ -66,14 +69,14 @@ killed_by(object *monster, short other)
     }
 
     length = mz_display_length(reason);
-    mvaddstr(12, (u8)((40 - length) / 2), reason);
+    mvaddstr(12, (uint8_t)((40 - length) / 2), reason);
 
     values[0] = cur_level;
     values[1] = rogue.gold;
     values[2] = rogue.exp_points;
     mz_sprintf(stats, 526, values);
     length = mz_display_length(stats);
-    mvaddstr(18, (u8)((40 - length) / 2), stats);
+    mvaddstr(18, (uint8_t)((40 - length) / 2), stats);
 
     (void)get_message(517, text, sizeof(text));
     mvaddstr(20, 11, text);
@@ -82,14 +85,14 @@ killed_by(object *monster, short other)
     rogue.col = 0;
     refresh();
     wait_for_ack();
-    md_exit(0);
+    restart_rogue();
 #endif
 }
 
 void
 win(void)
 {
-    u8 text[41];
+    uint8_t text[41];
     short id;
 
     clear();
@@ -98,12 +101,12 @@ win(void)
     /* メッセージをファイル化 */
     for (id = 520; id <= 524; id++) {
         (void)get_message(id, text, sizeof(text));
-        mvaddstr((u8)(id - 517), 0, text);
+        mvaddstr((uint8_t)(id - 517), 0, text);
     }
 
     for (id = 182; id <= 185; id++) {
         (void)get_message(id, text, sizeof(text));
-        mvaddstr((u8)(id - 172), 3, text);
+        mvaddstr((uint8_t)(id - 172), 3, text);
     }
 
     (void)get_message(517, text, sizeof(text));

@@ -146,7 +146,7 @@ steal_item(object *monster)
     short count = 0;
     short quantity = 0;
     short length;
-    u8 *desc = (u8 *)TEMP_BUFFER_ADDR;
+    uint8_t *desc = (uint8_t *)TEMP_BUFFER_ADDR;
 
 	if (rand_percent(15)) {
 		return;
@@ -283,12 +283,12 @@ check_gold_seeker(object *monster)
 int
 check_imitator(object *monster)
 {
-    u8 *name = (u8 *)TEMP_BUFFER_ADDR;
+    uint8_t *name = (uint8_t *)TEMP_BUFFER_ADDR;
 
     if (monster->m_flags & IMITATES) {
         wake_up(monster);
         if (!blind) {
-            get_message(monster->m_name_id, name, 20);
+            get_message(get_monster_name_id(monster), name, 20);
             message_id(206, name);
         }
         return 1;
@@ -300,7 +300,7 @@ void
 sting(object *monster)
 {
     short sting_chance = 35;
-    u8 *name = (u8 *)TEMP_BUFFER_ADDR;
+    uint8_t *name = (uint8_t *)TEMP_BUFFER_ADDR;
 
     if (sustain_strength || rogue.str_current <= 3) {
         return;
@@ -311,7 +311,7 @@ sting(object *monster)
         sting_chance -= (6 * ((rogue.exp + ring_exp) - 8));
     }
     if (rand_percent(sting_chance)) {
-        get_message(monster->m_name_id, name, 20);
+        get_message(get_monster_name_id(monster), name, 20);
         message_id(207, name);
         rogue.str_current--;
         print_stats(STAT_STRENGTH);
@@ -369,7 +369,7 @@ drain_life(void)
 int
 m_confuse(object *monster)
 {
-    u8 *name = (u8 *)TEMP_BUFFER_ADDR;
+    uint8_t *name = (uint8_t *)TEMP_BUFFER_ADDR;
 
     if (!rogue_can_see(monster->row, monster->col)) {
         return 0;
@@ -380,7 +380,7 @@ m_confuse(object *monster)
     }
     if (rand_percent(55)) {
         monster->m_flags &= (~CONFUSES);
-        get_message(monster->m_name_id, name, 20);
+        get_message(get_monster_name_id(monster), name, 20);
         message_id(209, name);
         confuse();
         return 1;
@@ -392,7 +392,7 @@ int
 flame_broil(object *monster)
 {
     short row, col;
-    u8 *name = (u8 *)TEMP_BUFFER_ADDR;
+    uint8_t *name = (uint8_t *)TEMP_BUFFER_ADDR;
 
     if ((!mon_sees(monster, rogue.row, rogue.col) || coin_toss())) {
         return 0;

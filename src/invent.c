@@ -22,9 +22,9 @@
 #define INVENTORY_PAGE_ROWS 8
 #define INVENTORY_SAVE_ROWS (INVENTORY_PAGE_ROWS + 1)
 
-#define descs_text ((u8 (*)[40])DESCS_TEXT_ADDR)
-#define descs_attr ((u8 (*)[40])DESCS_ATTR_ADDR)
-#define sc_title ((u8 (*)[34])SCROLL_TITLES_ADDR)
+#define descs_text ((uint8_t (*)[40])DESCS_TEXT_ADDR)
+#define descs_attr ((uint8_t (*)[40])DESCS_ATTR_ADDR)
+#define sc_title ((uint8_t (*)[34])SCROLL_TITLES_ADDR)
 
 typedef char descs_text_size_check[
     INVENTORY_SAVE_ROWS * 40 <= DESCS_TEXT_SIZE ? 1 : -1];
@@ -39,18 +39,18 @@ typedef char id_wands_size_check[
 typedef char id_rings_size_check[
     sizeof(struct id) * RINGS <= ID_RINGS_SIZE ? 1 : -1];
 
-static u8 append_message(u8 *buffer, u8 length, short msg_id);
-static u8 append_text(u8 *buffer, u8 length, const char *text);
-static u8 append_number(u8 *buffer, u8 length, short value, boolean plus);
-static u8 inventory_col(void);
-static void save_inventory_rows(u8 col, u8 rows);
-static void restore_inventory_rows(u8 col, u8 rows);
+static uint8_t append_message(uint8_t *buffer, uint8_t length, short msg_id);
+static uint8_t append_text(uint8_t *buffer, uint8_t length, const char *text);
+static uint8_t append_number(uint8_t *buffer, uint8_t length, short value, boolean plus);
+static uint8_t inventory_col(void);
+static void save_inventory_rows(uint8_t col, uint8_t rows);
+static void restore_inventory_rows(uint8_t col, uint8_t rows);
 
 void
 inventory(object *pack, unsigned short mask)
 {
     object *obj = pack->next_object;
-    u8 col;
+    uint8_t col;
 
     while (obj && !(obj->what_is & mask)) obj = obj->next_object;
     if (!obj) {
@@ -60,15 +60,15 @@ inventory(object *pack, unsigned short mask)
     col = inventory_col();
     while (obj) {
         object *next = obj;
-        u8 rows = 0;
-        u8 *desc = (u8 *)TEMP_BUFFER_ADDR;
-        u8 row;
+        uint8_t rows = 0;
+        uint8_t *desc = (uint8_t *)TEMP_BUFFER_ADDR;
+        uint8_t row;
 
         while (next && rows < INVENTORY_PAGE_ROWS) {
             if (next->what_is & mask) ++rows;
             next = next->next_object;
         }
-        save_inventory_rows(col, (u8)(rows + 1));
+        save_inventory_rows(col, (uint8_t)(rows + 1));
         row = 0;
         while (obj && row < rows) {
             if (obj->what_is & mask) {
@@ -79,13 +79,13 @@ inventory(object *pack, unsigned short mask)
                        (unsigned int)(row + 1) * ROGUE_COLUMNS + col,
                        0x70, 40);
                 DUNGEON(row + 1, col) =
-                    (u8)(DC_A + obj->ichar - 'a');
+                    (uint8_t)(DC_A + obj->ichar - 'a');
                 DUNGEON(row + 1, col + 1) = DC_R_BLACKET;
                 DUNGEON(row + 1, col + 2) = DC_SPC;
                 DUNGEON_ATTR(row + 1, col) = 0xf0;
                 DUNGEON_ATTR(row + 1, col + 1) = 0xf0;
                 DUNGEON_ATTR(row + 1, col + 2) = 0xf0;
-                mvaddnstr((u8)(row + 1), (u8)(col + 3), desc, 37);
+                mvaddnstr((uint8_t)(row + 1), (uint8_t)(col + 3), desc, 37);
                 ++row;
             }
             obj = obj->next_object;
@@ -96,12 +96,12 @@ inventory(object *pack, unsigned short mask)
                (unsigned int)(rows + 1) * ROGUE_COLUMNS + col, 0x70, 40);
 
         (void)get_message(518, desc, TEMP_BUFFER_SIZE);
-        mvaddnstr((u8)(rows + 1), col, desc, 40);
-        move((u8)rogue.row, (u8)rogue.col);
+        mvaddnstr((uint8_t)(rows + 1), col, desc, 40);
+        move((uint8_t)rogue.row, (uint8_t)rogue.col);
         refresh();
         wait_for_ack();
-        restore_inventory_rows(col, (u8)(rows + 1));
-        move((u8)rogue.row, (u8)rogue.col);
+        restore_inventory_rows(col, (uint8_t)(rows + 1));
+        move((uint8_t)rogue.row, (uint8_t)rogue.col);
         refresh_dungeon();
         while (obj && !(obj->what_is & mask)) obj = obj->next_object;
     }
@@ -112,7 +112,7 @@ make_scroll_titles(void)
 {
     short i, j, len;
     short sylls, s;
-    u8 n, *title;
+    uint8_t n, *title;
 
     for (i = 0; i < SCROLS; i++) {
         sylls = get_rand(2, 5);
@@ -138,9 +138,9 @@ make_scroll_titles(void)
 void
 get_desc(object *obj, char *desc, boolean capitalized)
 {
-    u8 *buffer = (u8 *)desc;
+    uint8_t *buffer = (uint8_t *)desc;
     struct id *id;
-    u8 length;
+    uint8_t length;
 
     (void)capitalized;
     length = 0;
@@ -501,7 +501,7 @@ nextpage:
 #endif
 
 /* MZ-700/1500固有 */
-static u8 append_number(u8 *buffer, u8 length, short value, boolean plus)
+static uint8_t append_number(uint8_t *buffer, uint8_t length, short value, boolean plus)
 {
     if (value < 0) {
         buffer[length++] = DC_MINUS;
@@ -512,22 +512,22 @@ static u8 append_number(u8 *buffer, u8 length, short value, boolean plus)
     return length + mz_number(buffer + length, (unsigned short)value);
 }
 
-static u8 append_message(u8 *buffer, u8 length, short msg_id)
+static uint8_t append_message(uint8_t *buffer, uint8_t length, short msg_id)
 {
     return length + get_message(msg_id, buffer + length,
                                 ROGUE_COLUMNS - length);
 }
 
-static u8 append_text(u8 *buffer, u8 length, const char *text)
+static uint8_t append_text(uint8_t *buffer, uint8_t length, const char *text)
 {
     while (*text && length < ROGUE_COLUMNS - 1) {
-        buffer[length++] = (u8)*text++;
+        buffer[length++] = (uint8_t)*text++;
     }
     buffer[length] = '\0';
     return length;
 }
 
-static u8 inventory_col(void)
+static uint8_t inventory_col(void)
 {
     if (rogue.col < 30) return 0;
     if (rogue.col < 50) return 20;
@@ -535,9 +535,9 @@ static u8 inventory_col(void)
 }
 
 /* 持ち物表示場所の保存 */
-static void save_inventory_rows(u8 col, u8 rows)
+static void save_inventory_rows(uint8_t col, uint8_t rows)
 {
-    u8 row;
+    uint8_t row;
 
     for (row = 0; row < rows; row++) {
         memcpy(descs_text[row],
@@ -549,9 +549,9 @@ static void save_inventory_rows(u8 col, u8 rows)
 }
 
 /* 持ち物表示場所の復元 */
-static void restore_inventory_rows(u8 col, u8 rows)
+static void restore_inventory_rows(uint8_t col, uint8_t rows)
 {
-    u8 row;
+    uint8_t row;
 
     for (row = 0; row < rows; row++) {
         memcpy(dungeon + (unsigned int)(row + 1) * ROGUE_COLUMNS + col,

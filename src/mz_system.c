@@ -11,7 +11,7 @@
 /*
     Reset
 */
-void RESET() __naked
+void RESET(void) __naked
 {
 __asm
     jp 0xe800
@@ -20,7 +20,7 @@ __endasm;
 /*
     乱数の初期値としてZ80のRレジスタを取得する
 */
-u8 fast_rand8(void) __naked
+uint8_t fast_rand8(void) __naked
 {
 __asm
     ld  a, r
@@ -31,7 +31,7 @@ __endasm;
 /*
     バンクをVRAM,メモリマップドI/Oに切り替える
 */
-void BANK_VRAM() __naked
+void BANK_VRAM(void) __naked
 {
 __asm
 ;    ld      hl, BANK_MODE
@@ -48,7 +48,7 @@ __endasm;
 /*
     0x0000をバンクをDRAMに切り替える
 */
-void BANK_DRAM_L() __naked
+void BANK_DRAM_L(void) __naked
 {
 __asm
 ;    ld      hl, BANK_MODE
@@ -65,7 +65,7 @@ __endasm;
 /*
     0xd000をバンクをDRAMに切り替える
 */
-void BANK_DRAM_H() __naked
+void BANK_DRAM_H(void) __naked
 {
 __asm
 ;    ld      hl, BANK_MODE
@@ -83,7 +83,7 @@ __endasm;
 /*
     バンクをモニタROM,VRAM,メモリマップドI/Oに切り替える
 */
-void BANK_ROM() __naked
+void BANK_ROM(void) __naked
 {
 __asm
 ;    ld      hl, BANK_MODE
@@ -138,7 +138,7 @@ __endasm;
 /*
     仮想VRAMからVRAMに全画面転送
 */
-void VRAM_Display(u8 *src) __z88dk_fastcall __naked
+void VRAM_Display(uint8_t *src) __z88dk_fastcall __naked
 {
 __asm
 

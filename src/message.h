@@ -13,11 +13,12 @@ extern void check_message(void);
 extern int rgetchar(void);
 extern int get_direction(void);
 extern void print_stats(int stat_mask);
-extern void message_id(short msg_id, const u8 *text);
-extern short format_message(short msg_id, const u8 *text, u8 *buffer,
+extern void message_id(short msg_id, const uint8_t *text);
+extern short format_message(short msg_id, const uint8_t *text, uint8_t *buffer,
                             short size);
-extern const u8 *find_message(short msg_id, u8 *length);
-extern short get_message(short msg_id, u8 *buffer, short size);
+extern const uint8_t *find_message(short msg_id, uint8_t *length);
+extern short get_message(short msg_id, uint8_t *buffer, short size);
+extern void reset_message_state(void);
 
 #if 0 /* MZ-700/1500では未対応 */
 extern void remessage(void);

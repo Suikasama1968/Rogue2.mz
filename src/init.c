@@ -18,6 +18,7 @@
 #include "message.h"
 #include "display.h"
 #include "invent.h"
+#include "move.h"
 #include "object.h"
 #include "pack.h"
 #include "random.h"
@@ -25,41 +26,23 @@
 #include "mz_curses.h"
 #include "mz_system.h"
 
+extern short halluc, blind, confused, levitate, haste_self, extra_hp;
+extern short less_hp;
+extern boolean being_held;
+extern boolean trap_door;
+extern short bear_trap;
+extern short new_level_message;
+
+static void init_game_state(int seed);
+
 int
 init(void)
 {
-    int seed;
-    WINDOW *main_window;
-
     if (read_mesg("MESG")) {
         return 1;
     }
 
-    /* init memory */
-    BANK_DRAM_L(); 
-    memset(LOW_RAM_BEGIN, 0x00, LOW_RAM_SIZE);
-
-    memset((void *)OBJECT_POOL_ADDR, 0x00,
-           OBJECT_POOL_SIZE + OBJECT_USED_SIZE);
-
-    /* init curses */
-    main_window = initscr();
-/*  if (main_window == NULL) {
-        return 1;
-    }
-*/ /* MZ版では必ず成功 */
-    init_color_attr();
-
-    seed = md_gseed();
-    (void) srrandom(seed);
-    get_wand_and_ring_materials();
-    make_scroll_titles();
-    
-    level_objects.next_object = 0;
-    level_monsters.next_monster = 0;
-    player_init();
-    party_counter = get_rand(1, PARTY_TIME);
-    ring_stats(0);
+    init_game();
     return 0;
 }
 
@@ -68,7 +51,6 @@ player_init(void)
 {
     object *obj;
 
-    rogue.pack.next_object = 0;
     identified_potions = 0;
 
     obj = alloc_object();
@@ -310,3 +292,49 @@ env_get_value(char **s, char *e, boolean add_blank, boolean no_colon)
     (*s)[i] = '\0';
 }
 #endif
+/* MZ-700/1500 固有処理 */
+void
+init_game(void)
+{
+    int seed;
+
+    BANK_DRAM_L();
+    seed = md_gseed();
+    memset(LOW_RAM_BEGIN, 0x00, LOW_RAM_SIZE);
+    memset((void *)OBJECT_POOL_ADDR, 0x00,
+           OBJECT_POOL_SIZE + OBJECT_USED_SIZE);
+    (void)initscr();
+    init_color_attr();
+    init_game_state(seed);
+}
+
+static void
+init_game_state(int seed)
+{
+    reset_object_state();
+    reset_message_state();
+
+    cur_level = 0;
+    max_level = 1;
+    new_level_message = 0;
+    reset_move_state();
+
+    halluc = 0;
+    blind = 0;
+    confused = 0;
+    levitate = 0;
+    haste_self = 0;
+    extra_hp = 0;
+    less_hp = 0;
+    being_held = 0;
+    trap_door = 0;
+    bear_trap = 0;
+
+    (void) srrandom(seed);
+    get_wand_and_ring_materials();
+    make_scroll_titles();
+
+    player_init();
+    party_counter = get_rand(1, PARTY_TIME);
+    ring_stats(0);
+}

@@ -91,7 +91,7 @@ zap_monster(object *monster, unsigned short kind)
 {
     short row, col;
     object *nm;
-    u8 tc, ta;
+    uint8_t tc, ta;
 
     row = monster->row;
     col = monster->col;
@@ -101,13 +101,13 @@ zap_monster(object *monster, unsigned short kind)
         if (monster->m_flags & HASTED) {
             monster->m_flags &= (~HASTED);
         } else {
-            monster->m_flags &= ~ALREADY_MOVED;
+            monster->slowed_toggle = 0;
             monster->m_flags |= SLOWED;
         }
         break;
     case HASTE_MONSTER:
         if (monster->m_flags & SLOWED) {
-            monster->m_flags &= ~(SLOWED | ALREADY_MOVED);
+            monster->m_flags &= ~SLOWED;
         } else {
             monster->m_flags |= HASTED;
         }

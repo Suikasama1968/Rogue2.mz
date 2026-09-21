@@ -25,6 +25,7 @@ extern void gr_armor(object *obj, int assign_wk);
 extern int get_armor_class(object *obj);
 extern void rand_place(object *obj);
 extern void clear_level_objects(void);
+extern void reset_object_state(void);
 extern void show_objects(void);
 extern void make_party(void);
 extern int next_party(void);

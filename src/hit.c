@@ -25,24 +25,25 @@ extern short add_strength;
 extern short ring_exp, r_rings;
 extern boolean being_held;
 
-#define hit_message ((u8 *)HIT_MESSAGE_ADDR)
+#define hit_message ((uint8_t *)HIT_MESSAGE_ADDR)
 
-static const u8 weapon_damage_n[WEAPONS] = { 1, 1, 1, 1, 1, 2, 3, 4 };
-static const u8 weapon_damage_s[WEAPONS] = { 1, 1, 2, 3, 4, 3, 4, 5 };
+static const uint8_t weapon_damage_n[WEAPONS] = { 1, 1, 1, 1, 1, 2, 3, 4 };
+static const uint8_t weapon_damage_s[WEAPONS] = { 1, 1, 2, 3, 4, 3, 4, 5 };
 
-static void get_monster_name(object *monster, u8 *name, short size);
-static void append_hit_message(short msg_id, const u8 *text);
+static void get_monster_name(object *monster, uint8_t *name, short size);
+static void append_hit_message(short msg_id, const uint8_t *text);
 
 void
 mon_hit(object *monster, char *other, boolean flame)
 {
     int damage, hit_chance;
     int i;
-    u8 *name = (u8 *)TEMP_BUFFER_ADDR;
-    const u8 *attacker;
+    uint16_t packed_damage;
+    uint8_t *name = (uint8_t *)TEMP_BUFFER_ADDR;
+    const uint8_t *attacker;
 
     if (other) {
-        attacker = (const u8 *)other;
+        attacker = (const uint8_t *)other;
     } else {
         get_monster_name(monster, name, 20);
         attacker = name;
@@ -62,11 +63,12 @@ mon_hit(object *monster, char *other, boolean flame)
         damage = monster->stationary_damage++;
     } else {
         damage = 0;
-        for (i = 0; i < monster->m_damage_n1; ++i) {
-            damage += get_rand(1, monster->m_damage_s1);
+        packed_damage = monster->m_damage;
+        for (i = 0; i < (packed_damage & 0x0f); i++) {
+            damage += get_rand(1, (packed_damage >> 4) & 0x0f);
         }
-        for (i = 0; i < monster->m_damage_n2; ++i) {
-            damage += get_rand(1, monster->m_damage_s2);
+        for (i = 0; i < ((packed_damage >> 8) & 0x0f); i++) {
+            damage += get_rand(1, (packed_damage >> 12) & 0x0f);
         }
         if (flame && (damage -= get_armor_class(rogue.armor)) < 0) {
             damage = 1;
@@ -84,13 +86,24 @@ rogue_hit(object *monster, boolean force_hit)
 {
     int damage, hit_chance;
 
-    if (check_imitator(monster)) return;
+    if (check_imitator(monster)) {
+        return;
+    }
     hit_chance = force_hit ? 100 : get_hit_chance(rogue.weapon);
-
+#if 0 /* MZ-700/1500では未サポート */
+    if (wizard) {
+	    hit_chance *= 2;
+	}
+#endif
     if (!rand_percent(hit_chance)) {
         (void)format_message(22, 0, hit_message, HIT_MESSAGE_SIZE);
     } else {
         damage = get_weapon_damage(rogue.weapon);
+#if 0 /* MZ-700/1500では未サポート */
+        if (wizard) {
+	        damage *= 3;
+    	}
+#endif
         if (mon_damage(monster, damage)) { /* still alive? */
             (void)format_message(23, 0, hit_message, HIT_MESSAGE_SIZE);
         }
@@ -188,7 +201,9 @@ lget_number(char *s)
 int
 to_hit(object *obj)
 {
-    if (!obj || obj->what_is != WEAPON || obj->which_kind >= WEAPONS) return 1;
+    if (!obj || obj->what_is != WEAPON || obj->which_kind >= WEAPONS) {
+        return 1;
+    }
     return weapon_damage_n[obj->which_kind] + obj->hit_enchant;
 }
 
@@ -207,7 +222,7 @@ damage_for_strength(void)
     i = 0;
     for (;;) {
         if (strength <= sa[i]) {
-            return ra[i];
+            return (int) ra[i];
         }
     i++;
     }
@@ -216,7 +231,7 @@ damage_for_strength(void)
 int
 mon_damage(object *monster, int damage)
 {
-    u8 *name = (u8 *)TEMP_BUFFER_ADDR;
+    uint8_t *name = (uint8_t *)TEMP_BUFFER_ADDR;
     short kill_exp;
 
     monster->hp_to_kill -= damage;
@@ -356,9 +371,9 @@ get_weapon_damage(object *weapon)
 
 /* MZ-700/1500固有 */
 static void
-get_monster_name(object *monster, u8 *name, short size)
+get_monster_name(object *monster, uint8_t *name, short size)
 {
-    get_message(monster->m_name_id, name, size);
+    get_message(get_monster_name_id(monster), name, size);
 }
 
 void
@@ -371,7 +386,7 @@ show_hit_message(void)
 }
 
 static void
-append_hit_message(short msg_id, const u8 *text)
+append_hit_message(short msg_id, const uint8_t *text)
 {
     short length = 0;
 

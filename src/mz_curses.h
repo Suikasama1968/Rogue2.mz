@@ -11,7 +11,7 @@
 extern "C" {
 #endif
 
-#include "mz_common.h"
+#include <stdint.h>
 
 #define MZ_STR_CSET_1 0xce
 #define MZ_STR_CSET_0 0xcf
@@ -29,27 +29,27 @@ extern "C" {
 #define A_NORMAL      0x0000
 #define COLOR_PAIR(n) ((attr_t)((n) & 0x00ff))
 
-typedef u16 attr_t;
+typedef uint16_t attr_t;
 
 typedef struct _win_st  WINDOW;
 
 struct _win_st
 {
-    u8           _cury, _curx;   // カーソル位置
-    u8          *_cur_addr;      // カーソルのV_RAMアドレス
-    u8          *_cur_attr;      // カーソルのV_ATTRアドレス
-    u8           _attrs;         // 現在のMZカラー属性
+    uint8_t           _cury, _curx;   // カーソル位置
+    uint8_t          *_cur_addr;      // カーソルのV_RAMアドレス
+    uint8_t          *_cur_attr;      // カーソルのV_ATTRアドレス
+    uint8_t           _attrs;         // 現在のMZカラー属性
 };
 
 extern WINDOW *initscr(void);
 extern int clear(void);
-extern int move(u8, u8);
-extern int addch(u16);
-extern int mvaddch(u8, u8, u16);
-extern int addstr(const u8 *);
-extern int mvaddstr(u8, u8, const u8 *);
-extern int addnstr(const u8 *, u8);
-extern int mvaddnstr(u8, u8, const u8 *, u8);
+extern int move(uint8_t, uint8_t);
+extern int addch(uint16_t);
+extern int mvaddch(uint8_t, uint8_t, uint16_t);
+extern int addstr(const uint8_t *);
+extern int mvaddstr(uint8_t, uint8_t, const uint8_t *);
+extern int addnstr(const uint8_t *, uint8_t);
+extern int mvaddnstr(uint8_t, uint8_t, const uint8_t *, uint8_t);
 extern int refresh(void);
 extern int getch(void);
 extern int flushinp(void);

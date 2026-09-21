@@ -38,7 +38,7 @@ void init_color_attr(void)
  */
 void colorize_dungeon(short row, short col)
 {
-    u8 ch = DUNGEON(row, col);
+    uint8_t ch = DUNGEON(row, col);
     short pair;
 
     switch (ch) {
@@ -60,7 +60,7 @@ void colorize_dungeon(short row, short col)
         break;
     }
     attrset(COLOR_PAIR(pair));
-    mvaddch((u8)row, (u8)col, ch);
+    mvaddch((uint8_t)row, (uint8_t)col, ch);
 }
 
 
@@ -79,9 +79,9 @@ void display_dungeon(void)
 void refresh_dungeon(void)
 {
     object *obj;
-    u8 object_char;
-    u8 tile = DUNGEON(rogue.row, rogue.col);
-    u8 attr = DUNGEON_ATTR(rogue.row, rogue.col);
+    uint8_t object_char;
+    uint8_t tile = DUNGEON(rogue.row, rogue.col);
+    uint8_t attr = DUNGEON_ATTR(rogue.row, rogue.col);
 
     for (obj = level_objects.next_object; obj; obj = obj->next_object) {
         if ((obj->picked_up & OBJECT_DETECTED) ||
@@ -94,7 +94,7 @@ void refresh_dungeon(void)
                 obj->picked_up &= ~OBJECT_WAS_HIDDEN;
             }
             if (halluc) {
-                object_char = (u8)gr_obj_char();
+                object_char = (uint8_t)gr_obj_char();
             } else switch (obj->what_is) {
             case GOLD:
                 object_char = DC_STAR;
@@ -125,7 +125,7 @@ void refresh_dungeon(void)
                 break;
             }
             DUNGEON(obj->row, obj->col) = object_char;
-            mvaddch((u8)obj->row, (u8)obj->col,
+            mvaddch((uint8_t)obj->row, (uint8_t)obj->col,
                     DUNGEON(obj->row, obj->col));
         }
     }
@@ -137,16 +137,16 @@ void refresh_dungeon(void)
                                PAIR_OBJECT : PAIR_MONSTER));
             obj->trail_char = DUNGEON(obj->row, obj->col);
             obj->trail_attr = DUNGEON_ATTR(obj->row, obj->col);
-            mvaddch((u8)obj->row, (u8)obj->col,
-                    halluc ? (u8)(DC_A + get_rand(0, MONSTERS - 1)) :
+            mvaddch((uint8_t)obj->row, (uint8_t)obj->col,
+                    halluc ? (uint8_t)(DC_A + get_rand(0, MONSTERS - 1)) :
                     ((obj->m_flags & IMITATES) ?
-                     (u8)obj->disguise : obj->m_char));
+                     (uint8_t)obj->disguise : obj->m_char));
         }
     }
     attrset(COLOR_PAIR(PAIR_PLAYER));
     tile = DUNGEON(rogue.row, rogue.col);
-    mvaddch((u8)rogue.row, (u8)rogue.col, (u16)rogue.fchar);
-    move((u8)rogue.row, (u8)rogue.col);
+    mvaddch((uint8_t)rogue.row, (uint8_t)rogue.col, (uint16_t)rogue.fchar);
+    move((uint8_t)rogue.row, (uint8_t)rogue.col);
     refresh();
     DUNGEON(rogue.row, rogue.col) = tile;
     DUNGEON_ATTR(rogue.row, rogue.col) = attr;

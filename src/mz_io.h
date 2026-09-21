@@ -12,6 +12,8 @@
 extern "C" {
 #endif
 
+#include <stdint.h>
+
 #define QDPA    0x1130  //コマンド
 #define QDPB    0x1131  //
 #define QDPC    0x1132  //
@@ -53,7 +55,7 @@ extern "C" {
 #define EIO     57      // I/Oエラー(ディスク異常)   
 
 // I/O インタフェース
-extern u16 File_Read(u8 *, u8 *, u16);
+extern uint16_t File_Read(uint8_t *, uint8_t *, uint16_t);
 
 #ifdef __cplusplus
 }

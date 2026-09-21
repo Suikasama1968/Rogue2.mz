@@ -6,13 +6,12 @@
  * 
  */
 
-#include "mz_common.h"
 #include "mz_io.h"
 
 /*
     MZ-700/MZ-1500判定　
 */
-static u8 Get_System_Info(void) __naked
+static uint8_t Get_System_Info(void) __naked
 {
 __asm
     ld  hl, 0x0002
@@ -25,7 +24,7 @@ __endasm;
 /*
     Quick Diskをオープンする
 */
-static u16 QD_open(void) __naked
+static uint16_t QD_open(void) __naked
 {
 __asm
     xor A       // Aレジスタ0クリア
@@ -56,7 +55,7 @@ __endasm;
     filename : 検索するファイル名(ASCIIコード)
     戻り値 : 0=成功, 0以外=エラーコード
  */
-static u16 QD_File_Search(u8 *filename) __naked
+static uint16_t QD_File_Search(uint8_t *filename) __naked
 {
 __asm
     ld  hl, 2    
@@ -122,7 +121,7 @@ __endasm;
     address : 読み込み先バッファ
     戻り値 : 0=成功, 0以外=エラーコード
 */
-static u16 QD_read(u8 *address) __z88dk_fastcall __naked
+static uint16_t QD_read(uint8_t *address) __z88dk_fastcall __naked
 {
 __asm
     ld  (QDPC), hl
@@ -151,7 +150,7 @@ __endasm;
     address : 読み込み先バッファ
     戻り値 : 0=成功, 0以外=エラーコード
 */
-static u16 Tape_read_info(void) __naked
+static uint16_t Tape_read_info(void) __naked
 {
 __asm
     call 0x0027       // インフォメーションブロック
@@ -161,7 +160,7 @@ __asm
 __endasm;
 }
 
-static u16 Tape_read_data(void) __naked
+static uint16_t Tape_read_data(void) __naked
 {
 __asm
     call 0x002a       // リードデータ
@@ -178,9 +177,9 @@ __endasm;
         buffer : 読み込み先バッファ
         max_size : バッファの最大サイズ
 */
-u16 File_Read(u8 *filename, u8 *buffer, u16 max_size)
+uint16_t File_Read(uint8_t *filename, uint8_t *buffer, uint16_t max_size)
 {
-    u8 retcode;
+    uint8_t retcode;
 
     if (Get_System_Info()) {
 RETRY:
@@ -190,7 +189,7 @@ RETRY:
         retcode = QD_File_Search(filename);
         if (retcode != 0) goto RETRY;
 
-        if (*(u16 *)QD_FILE_SIZE > max_size) return ENOSPC;
+        if (*(uint16_t *)QD_FILE_SIZE > max_size) return ENOSPC;
 
         retcode = QD_read(buffer);
         if (retcode != 0) goto RETRY;
@@ -201,12 +200,12 @@ RETRY:
     retcode = Tape_read_info();
     if (retcode != 0) return retcode;
 
-    if (*(u16 *)TAPE_FILE_SIZE > max_size) return ENOSPC;
+    if (*(uint16_t *)TAPE_FILE_SIZE > max_size) return ENOSPC;
 
     /*
      * テープヘッダーのロードアドレスではなく、
      * File_Read()が指定したバッファへ読み込ませる。
      */
-    *(u16 *)TAPE_DATA_ADDR = (u16)buffer;
+    *(uint16_t *)TAPE_DATA_ADDR = (uint16_t)buffer;
     return Tape_read_data();
 }

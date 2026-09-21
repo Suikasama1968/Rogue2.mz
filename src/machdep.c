@@ -10,8 +10,9 @@
  *
  */
 
+#include <stdint.h>
+
 #include "machdep.h"
-#include "mz_common.h"
 #include "mz_system.h"
 
 /* md_gseed() (Get Seed)
@@ -37,8 +38,8 @@ md_gseed(void)
 {
     int seed;
 
-    seed = *(u16 *)LOOP_COUNT;
-    seed ^= (u16)fast_rand8() << 8;
+    seed = *(uint16_t *)LOOP_COUNT;
+    seed ^= (uint16_t)fast_rand8() << 8;
     return (seed);
 }
 

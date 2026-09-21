@@ -18,19 +18,19 @@
 #include "mz_display.h"
 #include "mz_system.h"
 
-#define message_buffer ((u8 *)MESSAGE_BUFFER_ADDR)
+#define message_buffer ((uint8_t *)MESSAGE_BUFFER_ADDR)
 static boolean msg_cleared = 1;
-static u8 msg_col;
+static uint8_t msg_col;
 char hunger_str[8] = "";
 extern short add_strength;
 
 void
 message(char *msg, boolean intrpt)
 {
-    const u8 *p;
-    u8 length;
-    u8 more_col;
-    u8 more_length;
+    const uint8_t *p;
+    uint8_t length;
+    uint8_t more_col;
+    uint8_t more_length;
 
     (void)intrpt;
     attrset(A_NORMAL);
@@ -39,7 +39,7 @@ message(char *msg, boolean intrpt)
         more_length = mz_display_length(p);
         more_col = msg_col;
         if (more_col + more_length > V_COLUMN / 2) {
-            more_col = (u8)(V_COLUMN / 2 - more_length);
+            more_col = (uint8_t)(V_COLUMN / 2 - more_length);
         }
         move(MESSAGE_ROW, more_col);
         addnstr(p, length);
@@ -50,10 +50,10 @@ message(char *msg, boolean intrpt)
         check_message();
     }
     move(MESSAGE_ROW, 0);
-    addstr((const u8 *)msg);
+    addstr((const uint8_t *)msg);
     clrtoeol();
     msg_cleared = 0;
-    msg_col = mz_display_length((const u8 *)msg);
+    msg_col = mz_display_length((const uint8_t *)msg);
     refresh_dungeon();
 }
 
@@ -275,12 +275,12 @@ rgetchar(void)
 void
 print_stats(int stat_mask)
 {
-    u8 *line1 = (u8 *)TEMP_BUFFER_ADDR;
-    u8 *line2 = line1 + 48;
-    u8 *status1 = dungeon + ROGUE_COLUMNS * STATUS_ROW_1;
-    u8 *status2 = dungeon + ROGUE_COLUMNS * STATUS_ROW_2;
-    u8 *attr1 = dungeon_attr + ROGUE_COLUMNS * STATUS_ROW_1;
-    u8 *attr2 = dungeon_attr + ROGUE_COLUMNS * STATUS_ROW_2;
+    uint8_t *line1 = (uint8_t *)TEMP_BUFFER_ADDR;
+    uint8_t *line2 = line1 + 48;
+    uint8_t *status1 = dungeon + ROGUE_COLUMNS * STATUS_ROW_1;
+    uint8_t *status2 = dungeon + ROGUE_COLUMNS * STATUS_ROW_2;
+    uint8_t *attr1 = dungeon_attr + ROGUE_COLUMNS * STATUS_ROW_1;
+    uint8_t *attr2 = dungeon_attr + ROGUE_COLUMNS * STATUS_ROW_2;
     long *values = (long *)(line2 + 48);
 
     /* 40列版では2行を一体で整形するため、指定項目を含む全体を再描画する。 */
@@ -302,7 +302,7 @@ print_stats(int stat_mask)
     values[4] = rogue.exp_points;
     mz_sprintf(line2, 528, values);
     mvaddstr(STATUS_ROW_1, 0, line1);
-    addstr((const u8 *)hunger_str);
+    addstr((const uint8_t *)hunger_str);
     mvaddstr(STATUS_ROW_2, 0, line2);
 }
 
@@ -350,14 +350,14 @@ r_index(char *str, int ch, boolean last)
 
 /* MZ-700/1500固有 */
 /* メモリの中から対象となるメッセージを取得する */
-const u8 *find_message(short msg_id, u8 *length)
+const uint8_t *find_message(short msg_id, uint8_t *length)
 {
-    const u8 *base = (const u8 *)MESG_ADDR;
-    const u8 *entry = base;
-    const u8 *src;
+    const uint8_t *base = (const uint8_t *)MESG_ADDR;
+    const uint8_t *entry = base;
+    const uint8_t *src;
     unsigned short offset;
     unsigned short id;
-    u8 n;
+    uint8_t n;
 
     while (1) {
         id = (unsigned short)entry[0] |
@@ -377,10 +377,10 @@ const u8 *find_message(short msg_id, u8 *length)
 }
 
 /* 対象となるメッセージをバッファにコピーする*/
-short get_message(short msg_id, u8 *buffer, short size)
+short get_message(short msg_id, uint8_t *buffer, short size)
 {
-    const u8 *src;
-    u8 stored_length;
+    const uint8_t *src;
+    uint8_t stored_length;
     short length;
 
     src = find_message(msg_id, &stored_length);
@@ -392,7 +392,7 @@ short get_message(short msg_id, u8 *buffer, short size)
     return length;
 }
 
-void message_id(short msg_id, const u8 *text)
+void message_id(short msg_id, const uint8_t *text)
 {
     if (format_message(msg_id, text, message_buffer,
                        MESSAGE_BUFFER_SIZE) >= 0) {
@@ -401,16 +401,16 @@ void message_id(short msg_id, const u8 *text)
 }
 
 short
-format_message(short msg_id, const u8 *text, u8 *buffer, short size)
+format_message(short msg_id, const uint8_t *text, uint8_t *buffer, short size)
 {
-    const u8 *src;
-    u8 src_left;
+    const uint8_t *src;
+    uint8_t src_left;
     short length = 0;
 
     src = find_message(msg_id, &src_left);
     if (!src || size <= 0) return -1;
     while (src_left-- && length < size - 1) {
-        u8 ch = *src++;
+        uint8_t ch = *src++;
         if (ch == MESSAGE_FORMAT_STRING) {
             while (text && *text && length < size - 1) {
                 buffer[length++] = *text++;
@@ -421,4 +421,12 @@ format_message(short msg_id, const u8 *text, u8 *buffer, short size)
     }
     buffer[length] = '\0';
     return length;
+}
+
+void
+reset_message_state(void)
+{
+    msg_cleared = 1;
+    msg_col = 0;
+    hunger_str[0] = '\0';
 }

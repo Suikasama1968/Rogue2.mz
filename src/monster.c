@@ -22,7 +22,7 @@
 #include "mz_system.h"
 
 #define monster_pool ((object *)MONSTER_POOL_ADDR)
-#define monster_used ((u8 *)MONSTER_USED_ADDR)
+#define monster_used ((uint8_t *)MONSTER_USED_ADDR)
 
 typedef char monster_pool_size_check[
     sizeof(object) * MAX_MONSTERS <= MONSTER_POOL_SIZE ? 1 : -1];
@@ -35,7 +35,7 @@ extern short blind;
 extern short stealthy;
 
 #define mon_tab ((const object *)MONSTER_TABLE_ADDR)
-typedef char monster_object_size_check[sizeof(object) == 38 ? 1 : -1];
+typedef char monster_object_size_check[sizeof(object) == 36 ? 1 : -1];
 
 static int place_monster(short row, short col, boolean wandering);
 
@@ -91,16 +91,15 @@ mv_mons(void)
 
 	while (monster) {
         next_monster = monster->next_monster;
-        if (monster->m_flags & SLOWED) {
-            monster->m_flags ^= ALREADY_MOVED;
-            if (monster->m_flags & ALREADY_MOVED) {
-                monster = next_monster;
-                continue;
-            }
-        }
         if (monster->m_flags & HASTED) {
             mv_monster(monster, rogue.row, rogue.col);
             if (monster_at(monster->row, monster->col) != monster) {
+                monster = next_monster;
+                continue;
+            }
+        } else if (monster->m_flags & SLOWED) {
+            monster->slowed_toggle = !monster->slowed_toggle;
+            if (monster->slowed_toggle) {
                 monster = next_monster;
                 continue;
             }
@@ -142,10 +141,8 @@ party_monsters(int rn, int n)
 void
 mv_monster(object *monster, short row, short col)
 {
-    short dr;
-    short dc;
-    short next_row;
-    short next_col;
+    short i, n;
+    boolean tried[6];
 
     if (monster->m_flags & ASLEEP) {
         if (monster->m_flags & NAPPING) {
@@ -168,6 +165,10 @@ mv_monster(object *monster, short row, short col)
                                 WAKE_PERCENT)) {
             wake_up(monster);
         }
+        return;
+    }
+    if (monster->m_flags & ALREADY_MOVED) {
+        monster->m_flags &= ~ALREADY_MOVED;
         return;
     }
 
@@ -197,13 +198,69 @@ mv_monster(object *monster, short row, short col)
     if ((monster->m_flags & FLAMES) && flame_broil(monster)) {
         return;
     }
-    dr = row - monster->row;
-    dc = col - monster->col;
-    next_row = monster->row + ((dr > 0) ? 1 : ((dr < 0) ? -1 : 0));
-    next_col = monster->col + ((dc > 0) ? 1 : ((dc < 0) ? -1 : 0));
-    if (mtry(monster, next_row, next_col)) return;
-    if (mtry(monster, next_row, monster->col)) return;
-    (void)mtry(monster, monster->row, next_col);
+    if (monster->row > row) {
+        row = monster->row - 1;
+    } else if (monster->row < row) {
+        row = monster->row + 1;
+    }
+    if ((DUNGEON(row, monster->col) == TILE_DOOR) &&
+        mtry(monster, row, monster->col)) {
+        return;
+    }
+    if (monster->col > col) {
+        col = monster->col - 1;
+    } else if (monster->col < col) {
+        col = monster->col + 1;
+    }
+    if ((DUNGEON(monster->row, col) == TILE_DOOR) &&
+        mtry(monster, monster->row, col)) {
+        return;
+    }
+    if (mtry(monster, row, col)) {
+        return;
+    }
+
+    for (i = 0; i <= 5; i++) {
+        tried[i] = 0;
+    }
+    for (i = 0; i < 6; i++) {
+        do {
+            n = get_rand(0, 5);
+        } while (tried[n]);
+        switch (n) {
+        case 0:
+            if (mtry(monster, row, monster->col - 1)) {
+                return;
+            }
+            break;
+        case 1:
+            if (mtry(monster, row, monster->col)) {
+                return;
+            }
+            break;
+        case 2:
+            if (mtry(monster, row, monster->col + 1)) {
+                return;
+            }
+            break;
+        case 3:
+            if (mtry(monster, monster->row - 1, col)) {
+                return;
+            }
+            break;
+        case 4:
+            if (mtry(monster, monster->row, col)) {
+                return;
+            }
+            break;
+        case 5:
+            if (mtry(monster, monster->row + 1, col)) {
+                return;
+            }
+            break;
+        }
+        tried[n] = 1;
+    }
 }
 
 int
@@ -408,7 +465,7 @@ int
 gr_obj_char(void)
 {
     short r;
-    static const u8 rs[] = {
+    static const uint8_t rs[] = {
         DC_PERCENT, DC_EXCLAM, DC_QUESTION, DC_R_SQ_BLACKET,
         DC_EQUAL, DC_SLASH, DC_R_BLACKET, DC_COLON, DC_STAR
     };
@@ -437,7 +494,6 @@ mon_sees(object *monster, int row, int col)
                      cdif >= -1 && cdif <= 1);
 }
 
-#if 0 /* MZ-700/1500では未対応 */
 void
 mv_aquatars(void)
 {
@@ -454,12 +510,11 @@ mv_aquatars(void)
 	monster = monster->next_monster;
     }
 }
-#endif
 
 /* MZ-700/1500固有 */
 static int place_monster(short row, short col, boolean wandering)
 {
-    u8 i, mn;
+    uint8_t i, mn;
     object *monster;
     const object *type;
 
@@ -482,7 +537,7 @@ static int place_monster(short row, short col, boolean wandering)
 
 void clear_level_monsters(void)
 {
-    u8 i;
+    uint8_t i;
 
     level_monsters.next_monster = 0;
     i = MAX_MONSTERS - 1;
@@ -499,7 +554,7 @@ object *monster_at(short row, short col)
 void remove_monster(object *monster)
 {
     object *prev = &level_monsters;
-    u8 i;
+    uint8_t i;
 
     while (prev->next_monster && prev->next_monster != monster) {
         prev = prev->next_monster;
@@ -511,4 +566,10 @@ void remove_monster(object *monster)
             break;
         }
     }
+}
+
+short
+get_monster_name_id(const object *monster)
+{
+    return 307 + monster->m_char - DC_A;
 }

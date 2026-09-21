@@ -302,9 +302,9 @@ idntfy(void)
 {
     short ch;
     object *obj;
-    u8 *desc = (u8 *)TEMP_BUFFER_ADDR;
-    u8 length;
-    const u8 *prompt = find_message(260, &length);
+    uint8_t *desc = (uint8_t *)TEMP_BUFFER_ADDR;
+    uint8_t length;
+    const uint8_t *prompt = find_message(260, &length);
 
 AGAIN:
     ch = pack_letter((char *)prompt, ALL_OBJECTS);

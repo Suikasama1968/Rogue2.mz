@@ -25,6 +25,11 @@
 #include "mz_system.h"
 
 short m_moves;
+static short move_left_count;
+static short heal_exp = -1;
+static short heal_n;
+static short heal_count;
+static boolean heal_alt;
 /* unsigned long rogue_turns; 未使用 */
 extern short bear_trap;
 extern short blind;
@@ -116,7 +121,7 @@ one_move_rogue(short dirch, short pickup)
         get_desc(obj, desc, 1);
         length = 0;
         while (desc[length] != '\0') ++length;
-        length += get_message(69, (u8 *)desc + length,
+        length += get_message(69, (uint8_t *)desc + length,
                               ROGUE_COLUMNS - length);
         if (obj->what_is != GOLD && length < ROGUE_COLUMNS - 4) {
             desc[length++] = (char)DC_L_BLACKET;
@@ -242,7 +247,7 @@ multiple_move_rogue(int dirch)
 
 int is_passable(int row, int col)
 {
-    u8 tile;
+    uint8_t tile;
 
     if (row < MIN_ROW || row > MAX_ROW ||
         col < 0 || col >= ROGUE_COLUMNS) {
@@ -358,19 +363,17 @@ check_hunger(boolean messages_only)
 #else
     short i, n;
     boolean fainted = 0;
-    static short move_left_cou = 0;	/* Yasha */
-
     if (rogue.moves_left == HUNGRY) {
-        get_message(71, (u8 *)hunger_str, sizeof(hunger_str));
+        get_message(71, (uint8_t *)hunger_str, sizeof(hunger_str));
         message_id(72, 0);
     }
     if (rogue.moves_left == WEAK) {
-        get_message(73, (u8 *)hunger_str, sizeof(hunger_str));
+        get_message(73, (uint8_t *)hunger_str, sizeof(hunger_str));
         message_id(74, 0);
     }
     if (rogue.moves_left <= FAINT) {
         if (rogue.moves_left == FAINT) {
-            get_message(75, (u8 *)hunger_str, sizeof(hunger_str));
+            get_message(75, (uint8_t *)hunger_str, sizeof(hunger_str));
             message_id(76, 0);
         }
         n = get_rand(0, (FAINT - rogue.moves_left));
@@ -396,7 +399,7 @@ check_hunger(boolean messages_only)
     }
     switch (e_rings) {
     case -1:
-        rogue.moves_left -= move_left_cou;
+        rogue.moves_left -= move_left_count;
         break;
     case 0:
         rogue.moves_left--;
@@ -404,7 +407,7 @@ check_hunger(boolean messages_only)
     case 1:
         rogue.moves_left--;
         (void)check_hunger(1);
-        rogue.moves_left -= move_left_cou;
+        rogue.moves_left -= move_left_count;
         break;
     case 2:
         rogue.moves_left--;
@@ -412,7 +415,7 @@ check_hunger(boolean messages_only)
         rogue.moves_left--;
         break;
     }
-    move_left_cou ^= 1;
+    move_left_count ^= 1;
     return fainted;
 #endif
 }
@@ -487,26 +490,35 @@ gr_dir(void)
 void
 heal(void)
 {
-    static short heal_exp = -1, n, c = 0;
-    static boolean alt;
-    static const u8 turns[] = { 0, 20, 18, 17, 14, 13, 10, 9, 8, 7, 4, 3 };
+    static const uint8_t turns[] = { 0, 20, 18, 17, 14, 13, 10, 9, 8, 7, 4, 3 };
 
     if (rogue.hp_current >= rogue.hp_max) {
-        c = 0;
+        heal_count = 0;
         return;
     }
     if (rogue.exp != heal_exp) {
         heal_exp = rogue.exp;
-        n = (heal_exp < 1 || heal_exp > 11) ? 2 : turns[heal_exp];
+        heal_n = (heal_exp < 1 || heal_exp > 11) ? 2 : turns[heal_exp];
     }
-    if (++c >= n) {
-        c = 0;
+    if (++heal_count >= heal_n) {
+        heal_count = 0;
         rogue.hp_current += regeneration + 1;
-        if ((alt = !alt) != 0) {
+        if ((heal_alt = !heal_alt) != 0) {
             rogue.hp_current++;
         }
         if (rogue.hp_current > rogue.hp_max) {
             rogue.hp_current = rogue.hp_max;
         }
     }
+}
+
+/* MZ-700/1500固有 */
+void
+reset_move_state(void)
+{
+    m_moves = 0;
+    move_left_count = 0;
+    heal_exp = -1;
+    heal_count = 0;
+    heal_alt = 0;
 }

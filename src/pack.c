@@ -11,6 +11,7 @@
 #include "display.h"
 #include "invent.h"
 #include "message.h"
+#include "monster.h"
 #include "move.h"
 #include "object.h"
 #include "pack.h"
@@ -116,7 +117,10 @@ drop(void)
             return;
         }
         if (obj->in_use_flags & BEING_WIELDED) unwield(obj);
-        if (obj->in_use_flags & BEING_WORN) unwear(obj);
+        if (obj->in_use_flags & BEING_WORN) {
+            mv_aquatars();
+            unwear(obj);
+        }
         if (obj->in_use_flags & (ON_LEFT_HAND | ON_RIGHT_HAND)) un_put_on(obj);
     }
     if (obj->quantity > 1 && obj->what_is != WEAPON) {
@@ -210,6 +214,7 @@ take_off(void)
         message_id(85, 0);
         return;
     }
+    mv_aquatars();
     unwear(obj);
     object_message(obj, 94);
     reg_move();
@@ -491,7 +496,7 @@ static void object_message(object *obj, short msg_id)
 
     get_desc(obj, desc, 0);
     for (length = 0; desc[length] != '\0'; ++length) {}
-    get_message(msg_id, (u8 *)desc + length, ROGUE_COLUMNS - length);
+    get_message(msg_id, (uint8_t *)desc + length, ROGUE_COLUMNS - length);
     message((char *)desc, 0);
 }
 

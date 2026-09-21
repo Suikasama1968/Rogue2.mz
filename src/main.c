@@ -10,6 +10,8 @@
  *
  */
 
+#include <setjmp.h>
+
 #include "rogue.h"
 #include "main.h"
 #include "init.h"
@@ -24,12 +26,19 @@
 #include "mz_io.h"
 #include "mz_system.h"
 
+static jmp_buf env;
+
 int
 main(void)
 {
-    boolean first = 1;
+    boolean first;
 
     if (init()) return 1;
+
+    if (setjmp(env)) {
+        init_game();
+    }
+    first = 1;
 
     for (;;) {
         clear_level();
@@ -54,7 +63,7 @@ int
 read_mesg(char *argv_msgfile)
 {
     /* ROMが有効な状態で、仮想VRAMをバッファとしてメッセージを読み込む */
-    if (File_Read((u8 *)argv_msgfile, (u8 *)MESG_LOAD_ADDR,
+    if (File_Read((uint8_t *)argv_msgfile, (uint8_t *)MESG_LOAD_ADDR,
                      MESG_LOAD_SIZE)) return 1;
                      
     /* 圧縮データをメッセージ・モンスターテーブル領域へ展開する */
@@ -71,3 +80,10 @@ usage()
     exit(1);
 }
 #endif
+
+/* MZ-700/1500固有 */
+void
+restart_rogue(void)
+{
+    longjmp(env, 1);
+}

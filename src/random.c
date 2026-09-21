@@ -13,7 +13,7 @@
 void
 srrandom(int seed)
 {
-    *(u16 *)XSHIFT = seed ? (u16)seed : 0xace1u;
+    *(uint16_t *)XSHIFT = seed ? (uint16_t)seed : 0xace1u;
 }
 
 /* long */

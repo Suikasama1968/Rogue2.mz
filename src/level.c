@@ -9,7 +9,9 @@
  *         gain or profit.
  *
  */
+#include <stdint.h>
 #include <string.h>
+
 #include "rogue.h"
 #include "level.h"
 #include "message.h"
@@ -26,23 +28,24 @@ extern boolean detect_monster;
 extern boolean see_invisible;
 extern short levitate;
 
-u8 *dungeon = (u8 *)TEXT_V_VRAM;
-u8 *dungeon_attr = (u8 *)TEXT_V_ATTR;
+uint8_t *dungeon = (uint8_t *)TEXT_V_VRAM;
+uint8_t *dungeon_attr = (uint8_t *)TEXT_V_ATTR;
 short cur_level = 0;
 short max_level = 1;
 short cur_room = NO_ROOM;
 short party_room = NO_ROOM;
-u8 stairs_row;
-u8 stairs_col;
+short new_level_message = 0;
+uint8_t stairs_row;
+uint8_t stairs_col;
 
-/* 再帰呼び出しによるスタック不足対応*/
-#define MAZE_TOP       (*(u8 *)(MAZE_BOUNDS_ADDR + 0))
-#define MAZE_BOTTOM    (*(u8 *)(MAZE_BOUNDS_ADDR + 1))
-#define MAZE_LEFT      (*(u8 *)(MAZE_BOUNDS_ADDR + 2))
-#define MAZE_RIGHT     (*(u8 *)(MAZE_BOUNDS_ADDR + 3))
-#define MAZE_STACK_ROWS ((u8 *)MAZE_STACK_ADDR)
-#define MAZE_STACK_COLS ((u8 *)(MAZE_STACK_ADDR + MAZE_STACK_ENTRIES))
-#define MAZE_STACK_DIRS ((u8 *)(MAZE_STACK_ADDR + (MAZE_STACK_ENTRIES * 2)))
+/* MZ-700/1500 再帰呼び出しによるスタック不足対応*/
+#define MAZE_TOP       (*(uint8_t *)(MAZE_BOUNDS_ADDR + 0))
+#define MAZE_BOTTOM    (*(uint8_t *)(MAZE_BOUNDS_ADDR + 1))
+#define MAZE_LEFT      (*(uint8_t *)(MAZE_BOUNDS_ADDR + 2))
+#define MAZE_RIGHT     (*(uint8_t *)(MAZE_BOUNDS_ADDR + 3))
+#define MAZE_STACK_ROWS ((uint8_t *)MAZE_STACK_ADDR)
+#define MAZE_STACK_COLS ((uint8_t *)(MAZE_STACK_ADDR + MAZE_STACK_ENTRIES))
+#define MAZE_STACK_DIRS ((uint8_t *)(MAZE_STACK_ADDR + (MAZE_STACK_ENTRIES * 2)))
 
 void
 make_level(void)
@@ -51,7 +54,7 @@ make_level(void)
     int t;
     int must_exist1, must_exist2, must_exist3;
     int vertical;
-    u8 random_rooms[MAXROOMS];
+    uint8_t random_rooms[MAXROOMS];
     boolean big_room;
 
     if (cur_level < LAST_DUNGEON) {
@@ -120,11 +123,11 @@ make_room(short rn, short r1, short r2, short r3)
     int i, j;
 
     if (rn == BIG_ROOM) {
-        rn = 0;
-        left_col = get_rand(0, 10);
-        right_col = get_rand(ROGUE_COLUMNS - 11, ROGUE_COLUMNS - 1);
         top_row = get_rand(MIN_ROW, MIN_ROW + 5);
         bottom_row = get_rand(MAX_ROW - 5, MAX_ROW);
+        left_col = get_rand(0, 10);
+        right_col = get_rand(ROGUE_COLUMNS - 11, ROGUE_COLUMNS - 1);
+        rn = 0;
     } else {
         switch (rn % 3) {
         case 0:
@@ -176,12 +179,12 @@ make_room(short rn, short r1, short r2, short r3)
     room_exists[rn] = 1;
     rm = &rooms[rn];
     rm->is_room = R_ROOM;
-    rm->left_col = (u8)left_col;
-    rm->top_row = (u8)top_row;
-    rm->right_col = (u8)right_col;
-    rm->bottom_row = (u8)bottom_row;
-    rm->center_col = (u8)((rm->left_col + rm->right_col) / 2);
-    rm->center_row = (u8)((rm->top_row + rm->bottom_row) / 2);
+    rm->left_col = (uint8_t)left_col;
+    rm->top_row = (uint8_t)top_row;
+    rm->right_col = (uint8_t)right_col;
+    rm->bottom_row = (uint8_t)bottom_row;
+    rm->center_col = (uint8_t)((rm->left_col + rm->right_col) / 2);
+    rm->center_row = (uint8_t)((rm->top_row + rm->bottom_row) / 2);
 
     for (i = rm->top_row; i <= rm->bottom_row; i++) {
         for (j = rm->left_col; j <= rm->right_col; j++) {
@@ -266,20 +269,28 @@ void
 put_door(room *rm, short dir, short *row, short *col)
 {
     short r, c;
+    uint8_t *p, *end;
+    door *dp;
+
+    dp = &rm->doors[dir / 2];
 
     if (rm->is_room & R_MAZE) {
         /* 迷路では扉を置かず、既存通路から区画境界まで掘り延ばす。 */
         r = rm->center_row;
         c = rm->center_col;
-        while (DUNGEON(r,c) != TILE_TUNNEL) {
-            ++c;
+        p = dungeon + (uint16_t)r * ROGUE_COLUMNS + c;
+        while (*p != TILE_TUNNEL) {
+            c++;
+            p++;
             if (c > rm->right_col) {
                 c = rm->left_col;
                 if (++r > rm->bottom_row) {
                     r = rm->center_row; c = rm->center_col;
-                    DUNGEON(r,c) = TILE_TUNNEL;
+                    p = dungeon + (uint16_t)r * ROGUE_COLUMNS + c;
+                    *p = TILE_TUNNEL;
                     break;
                 }
+                p = dungeon + (uint16_t)r * ROGUE_COLUMNS + c;
             }
         }
         switch (dir) {
@@ -287,24 +298,26 @@ put_door(room *rm, short dir, short *row, short *col)
         case DOWN:
             *row = (dir == UPWARD) ? rm->top_row : rm->bottom_row;
             *col = c;
-            while (r != *row) {
-                DUNGEON(r,c) = TILE_TUNNEL;
-                r += (r > *row) ? -1 : 1;
+            end = dungeon + (uint16_t)*row * ROGUE_COLUMNS + c;
+            while (p != end) {
+                *p = TILE_TUNNEL;
+                p += (p > end) ? -ROGUE_COLUMNS : ROGUE_COLUMNS;
             }
             break;
         case RIGHT:
         case LEFT:
             *col = (dir == LEFT) ? rm->left_col : rm->right_col;
             *row = r;
-            while (c != *col) {
-                DUNGEON(r,c) = TILE_TUNNEL;
-                c += (c > *col) ? -1 : 1;
+            end = dungeon + (uint16_t)r * ROGUE_COLUMNS + *col;
+            while (p != end) {
+                *p = TILE_TUNNEL;
+                p += (p > end) ? -1 : 1;
             }
             break;
         }
-        DUNGEON(*row,*col) = TILE_TUNNEL;
-        rm->doors[dir / 2].door_row = *row;
-        rm->doors[dir / 2].door_col = *col;
+        *p = TILE_TUNNEL;
+        dp->door_row = *row;
+        dp->door_col = *col;
         return;
     }
     switch (dir) {
@@ -319,16 +332,17 @@ put_door(room *rm, short dir, short *row, short *col)
         *row = get_rand(rm->top_row + 1, rm->bottom_row - 1);
         break;
     }
-    DUNGEON(*row, *col) = TILE_DOOR;
-    rm->doors[dir / 2].door_row = *row;
-    rm->doors[dir / 2].door_col = *col;
+    p = dungeon + (uint16_t)*row * ROGUE_COLUMNS + *col;
+    *p = TILE_DOOR;
+    dp->door_row = *row;
+    dp->door_col = *col;
 }
 
 void
 draw_simple_passage(short row1, short col1, short row2, short col2, short dir)
 {
-    short i;
     short middle, t;
+    uint8_t *p, *end;
 
     if (dir == LEFT || dir == RIGHT) {
         if (col1 > col2) {
@@ -336,14 +350,21 @@ draw_simple_passage(short row1, short col1, short row2, short col2, short dir)
             swap(col1, col2);
         }
         middle = get_rand(col1 + 1, col2 - 1);
-        for (i = col1 + 1; i != middle; i++) {
-            DUNGEON(row1, i) = TILE_TUNNEL;
+        p = dungeon + (uint16_t)row1 * ROGUE_COLUMNS + col1 + 1;
+        end = dungeon + (uint16_t)row1 * ROGUE_COLUMNS + middle;
+        while (p != end) {
+            *p++ = TILE_TUNNEL;
         }
-        for (i = row1; i != row2; i += (row1 > row2) ? -1 : 1) {
-            DUNGEON(i, middle) = TILE_TUNNEL;
+        p = dungeon + (uint16_t)row1 * ROGUE_COLUMNS + middle;
+        end = dungeon + (uint16_t)row2 * ROGUE_COLUMNS + middle;
+        while (p != end) {
+            *p = TILE_TUNNEL;
+            p += (p > end) ? -ROGUE_COLUMNS : ROGUE_COLUMNS;
         }
-        for (i = middle; i != col2; i++) {
-            DUNGEON(row2, i) = TILE_TUNNEL;
+        p = dungeon + (uint16_t)row2 * ROGUE_COLUMNS + middle;
+        end = dungeon + (uint16_t)row2 * ROGUE_COLUMNS + col2;
+        while (p != end) {
+            *p++ = TILE_TUNNEL;
         }
     } else {
         if (row1 > row2) {
@@ -351,19 +372,30 @@ draw_simple_passage(short row1, short col1, short row2, short col2, short dir)
             swap(col1, col2);
         }
         middle = get_rand(row1 + 1, row2 - 1);
-        for (i = row1 + 1; i != middle; i++) {
-            DUNGEON(i, col1) = TILE_TUNNEL;
+        p = dungeon + (uint16_t)(row1 + 1) * ROGUE_COLUMNS + col1;
+        end = dungeon + (uint16_t)middle * ROGUE_COLUMNS + col1;
+        while (p != end) {
+            *p = TILE_TUNNEL;
+            p += ROGUE_COLUMNS;
         }
-        for (i = col1; i != col2; i += (col1 > col2) ? -1 : 1) {
-            DUNGEON(middle, i) = TILE_TUNNEL;
+        p = dungeon + (uint16_t)middle * ROGUE_COLUMNS + col1;
+        end = dungeon + (uint16_t)middle * ROGUE_COLUMNS + col2;
+        while (p != end) {
+            *p = TILE_TUNNEL;
+            p += (p > end) ? -1 : 1;
         }
-        for (i = middle; i != row2; i++) {
-            DUNGEON(i, col2) = TILE_TUNNEL;
+        p = dungeon + (uint16_t)middle * ROGUE_COLUMNS + col2;
+        end = dungeon + (uint16_t)row2 * ROGUE_COLUMNS + col2;
+        while (p != end) {
+            *p = TILE_TUNNEL;
+            p += ROGUE_COLUMNS;
         }
     }
-/*    if (rand_percent(HIDE_PERCENT)) {
+#if 0 /* MZ-700/MZ-1500では未対応*/
+    if (rand_percent(HIDE_PERCENT)) {
 	    hide_boxed_passage(row1, col1, row2, col2, 1);
-    }*/
+    }
+#endif
 }
 
 int
@@ -389,7 +421,10 @@ add_mazes(void)
     if (cur_level <= 1) return;
     start = get_rand(0, MAXROOMS - 1);
     maze_percent = (cur_level * 5) / 4;
-    if (cur_level > 15) maze_percent += cur_level;
+
+    if (cur_level > 15) {
+        maze_percent += cur_level;
+    }
 
     for (i = 0; i < MAXROOMS; i++) {
         j = (start + i) % MAXROOMS;
@@ -401,10 +436,10 @@ add_mazes(void)
         br = (j / 3 == 0) ? ROW1 - 1 : ((j / 3 == 1) ? ROW2 - 1 : MAX_ROW);
         ++lc; --rc; ++tr; --br;
         rm = &rooms[j];
-        rm->left_col = (u8)lc; rm->right_col = (u8)rc;
-        rm->top_row = (u8)tr; rm->bottom_row = (u8)br;
-        rm->center_row = (u8)((tr + br) / 2);
-        rm->center_col = (u8)((lc + rc) / 2);
+        rm->left_col = (uint8_t)lc; rm->right_col = (uint8_t)rc;
+        rm->top_row = (uint8_t)tr; rm->bottom_row = (uint8_t)br;
+        rm->center_row = (uint8_t)((tr + br) / 2);
+        rm->center_col = (uint8_t)((lc + rc) / 2);
         rm->is_room = R_MAZE;
         room_exists[j] = 1;
         make_maze(get_rand(tr, br), get_rand(lc, rc),
@@ -434,28 +469,30 @@ mask_room(short rn, short *row, short *col, unsigned short mask)
 void
 make_maze(short r, short c, short tr, short br, short lc, short rc)
 {
-    u8 dirs[4];
-    u8 depth = 0;
-    u8 row = (u8)r;
-    u8 col = (u8)c;
-    u8 state, direction;
-    u8 i, t1, t2, t;
+    uint8_t dirs[4];
+    uint8_t depth = 0;
+    uint8_t row = (uint8_t)r;
+    uint8_t col = (uint8_t)c;
+    uint8_t state, direction;
+    uint8_t i, t1, t2, t;
+    uint8_t *p;
 
     /* MZ版では境界と探索スタックをワークへ置き、Cスタックを使用しない */
-    MAZE_TOP = (u8)tr;
-    MAZE_BOTTOM = (u8)br;
-    MAZE_LEFT = (u8)lc;
-    MAZE_RIGHT = (u8)rc;
+    MAZE_TOP = (uint8_t)tr;
+    MAZE_BOTTOM = (uint8_t)br;
+    MAZE_LEFT = (uint8_t)lc;
+    MAZE_RIGHT = (uint8_t)rc;
 
 new_cell:
-    DUNGEON(row, col) = TILE_TUNNEL;
+    p = dungeon + (uint16_t)row * ROGUE_COLUMNS + col;
+    *p = TILE_TUNNEL;
     dirs[0] = 0;
     dirs[1] = 1;
     dirs[2] = 2;
     dirs[3] = 3;
     if (rand_percent(33)) {
         for (i = 0; i < 10; i++) {
-            t1 = (u8)get_rand(0, 3); t2 = (u8)get_rand(0, 3);
+            t1 = (uint8_t)get_rand(0, 3); t2 = (uint8_t)get_rand(0, 3);
             t = dirs[t1]; dirs[t1] = dirs[t2]; dirs[t2] = t;
         }
     }
@@ -477,14 +514,16 @@ next_direction:
     MAZE_STACK_ROWS[depth] = state + 0x20;
     direction = MAZE_STACK_DIRS[depth] & 3;
     MAZE_STACK_DIRS[depth] >>= 2;
+    /* MZ版では同じ地点からの地形参照を基準アドレスから行う */
+    p = dungeon + (uint16_t)row * ROGUE_COLUMNS + col;
 
     switch (direction) {
         case 0:                         /* UPWARD */
             if (row - 1 >= MAZE_TOP &&
-                DUNGEON(row-1,col) != TILE_TUNNEL &&
-                DUNGEON(row-1,col-1) != TILE_TUNNEL &&
-                DUNGEON(row-1,col+1) != TILE_TUNNEL &&
-                (row-2 < MAZE_TOP || DUNGEON(row-2,col) != TILE_TUNNEL)) {
+                *(p-ROGUE_COLUMNS) != TILE_TUNNEL &&
+                *(p-ROGUE_COLUMNS-1) != TILE_TUNNEL &&
+                *(p-ROGUE_COLUMNS+1) != TILE_TUNNEL &&
+                (row-2 < MAZE_TOP || *(p-(ROGUE_COLUMNS*2)) != TILE_TUNNEL)) {
                 row--;
                 depth++;
                 goto new_cell;
@@ -492,10 +531,10 @@ next_direction:
             break;
         case 1:                         /* DOWN */
             if (row + 1 <= MAZE_BOTTOM &&
-                DUNGEON(row+1,col) != TILE_TUNNEL &&
-                DUNGEON(row+1,col-1) != TILE_TUNNEL &&
-                DUNGEON(row+1,col+1) != TILE_TUNNEL &&
-                (row+2 > MAZE_BOTTOM || DUNGEON(row+2,col) != TILE_TUNNEL)) {
+                *(p+ROGUE_COLUMNS) != TILE_TUNNEL &&
+                *(p+ROGUE_COLUMNS-1) != TILE_TUNNEL &&
+                *(p+ROGUE_COLUMNS+1) != TILE_TUNNEL &&
+                (row+2 > MAZE_BOTTOM || *(p+(ROGUE_COLUMNS*2)) != TILE_TUNNEL)) {
                 row++;
                 depth++;
                 goto new_cell;
@@ -503,10 +542,10 @@ next_direction:
             break;
         case 2:                         /* LEFT */
             if (col - 1 >= MAZE_LEFT &&
-                DUNGEON(row,col-1) != TILE_TUNNEL &&
-                DUNGEON(row-1,col-1) != TILE_TUNNEL &&
-                DUNGEON(row+1,col-1) != TILE_TUNNEL &&
-                (col-2 < MAZE_LEFT || DUNGEON(row,col-2) != TILE_TUNNEL)) {
+                *(p-1) != TILE_TUNNEL &&
+                *(p-ROGUE_COLUMNS-1) != TILE_TUNNEL &&
+                *(p+ROGUE_COLUMNS-1) != TILE_TUNNEL &&
+                (col-2 < MAZE_LEFT || *(p-2) != TILE_TUNNEL)) {
                 col--;
                 depth++;
                 goto new_cell;
@@ -514,10 +553,10 @@ next_direction:
             break;
         case 3:                         /* RIGHT */
             if (col + 1 <= MAZE_RIGHT &&
-                DUNGEON(row,col+1) != TILE_TUNNEL &&
-                DUNGEON(row-1,col+1) != TILE_TUNNEL &&
-                DUNGEON(row+1,col+1) != TILE_TUNNEL &&
-                (col+2 > MAZE_RIGHT || DUNGEON(row,col+2) != TILE_TUNNEL)) {
+                *(p+1) != TILE_TUNNEL &&
+                *(p-ROGUE_COLUMNS+1) != TILE_TUNNEL &&
+                *(p+ROGUE_COLUMNS+1) != TILE_TUNNEL &&
+                (col+2 > MAZE_RIGHT || *(p+2) != TILE_TUNNEL)) {
                 col++;
                 depth++;
                 goto new_cell;
@@ -586,6 +625,10 @@ void put_player(short nr)
         cur_room = rn;
         if (rn != NO_ROOM) light_up_room(rn);
     }
+    if (new_level_message) {
+        message_id(new_level_message, 0);
+        new_level_message = 0;
+    }
 }
 
 int drop_check(void)
@@ -625,7 +668,7 @@ add_exp(int e, boolean promotion)
 {
     short new_exp;
     short hp;
-    u8 mz_number[8];
+    uint8_t mz_number[8];
     long value;
 
     rogue.exp_points += e;

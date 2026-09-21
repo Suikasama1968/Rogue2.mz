@@ -33,7 +33,7 @@ throw(void)
     object *weapon;
     short dir, row, col;
     object *monster;
-    u8 *prompt = (u8 *)TEMP_BUFFER_ADDR;
+    uint8_t *prompt = (uint8_t *)TEMP_BUFFER_ADDR;
 
     dir = get_direction();
 	if (dir == CANCEL) {
@@ -105,8 +105,8 @@ get_thrown_at_monster(object *obj, short dir, short *row, short *col)
 {
     short old_row = *row;
     short old_col = *col;
-    u8 i;
-    u8 tile;
+    uint8_t i;
+    uint8_t tile;
 
     for (i = 0; i < 24; i++) {
         get_dir_rc(dir, row, col, 0);
@@ -120,7 +120,7 @@ get_thrown_at_monster(object *obj, short dir, short *row, short *col)
         if (DUNGEON_ATTR(*row, *col) != ATTR_HIDDEN) {
             tile = DUNGEON(*row, *col);
             attrset(COLOR_PAIR(PAIR_OBJECT));
-            mvaddch((u8)*row, (u8)*col, DC_R_BLACKET);
+            mvaddch((uint8_t)*row, (uint8_t)*col, DC_R_BLACKET);
             refresh_dungeon();
             DUNGEON(*row, *col) = tile;
             colorize_dungeon(*row, *col);
@@ -138,7 +138,7 @@ void
 flop_weapon(object *weapon, short row, short col)
 {
     object *new_weapon;
-    u8 i;
+    uint8_t i;
 
     for (i = 0; i < 9; i++) {
         short r = row;

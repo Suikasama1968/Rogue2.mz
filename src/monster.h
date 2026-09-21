@@ -25,7 +25,10 @@ extern int flit(object *monster);
 
 #if 0 /* MZ-700/1500では未対応 */
 extern void aim_monster(object *monster);
-extern void mv_aquatars(void);
 #endif
+extern void mv_aquatars(void);
+
+/* MZ-700/1500固有 */
+extern short get_monster_name_id(const object *monster);
 
 #endif /* not __MONSTER_H__ */

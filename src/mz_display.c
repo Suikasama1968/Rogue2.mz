@@ -6,15 +6,14 @@
  */
 #include "rogue.h"
 #include "message.h"
-#include "mz_common.h"
 #include "mz_display.h"
 
 /*
     MZディスプレイコード文字列の表示文字数を返す
 */
-u8 mz_display_length(const u8 *text)
+uint8_t mz_display_length(const uint8_t *text)
 {
-    u8 length = 0;
+    uint8_t length = 0;
 
     while (*text) {
         if (*text != DC_NICOCHAN_0 && *text != DC_NICOCHAN_1) length++;
@@ -26,14 +25,14 @@ u8 mz_display_length(const u8 *text)
 /*
     数値を文字列に変換格納する long対応
 */
-u8 mz_number(u8 *dst, unsigned long value)
+uint8_t mz_number(uint8_t *dst, uint32_t value)
 {
-    u8 work[10];
-    u8 length = 0;
-    u8 count;
+    uint8_t work[10];
+    uint8_t length = 0;
+    uint8_t count;
 
     do {
-        work[length++] = (u8)(DC_0 + value % 10);
+        work[length++] = (uint8_t)(DC_0 + value % 10);
         value /= 10;
     } while (value);
     count = length;
@@ -45,10 +44,10 @@ u8 mz_number(u8 *dst, unsigned long value)
 /*
     MZディスプレイコード対応のsprintf関数
 */
-void mz_sprintf(u8 *dst, short msg_id, const long *values)
+void mz_sprintf(uint8_t *dst, short msg_id, const int32_t *values)
 {
-    const u8 *format;
-    u8 length;
+    const uint8_t *format;
+    uint8_t length;
 
     format = find_message(msg_id, &length);
     if (!format) {
@@ -56,7 +55,7 @@ void mz_sprintf(u8 *dst, short msg_id, const long *values)
         return;
     }
     while (length--) {
-        u8 code = *format++;
+        uint8_t code = *format++;
 
         switch (code) {
         case MESSAGE_FORMAT_DECIMAL:    // %d

@@ -5,14 +5,14 @@
  * Copyright (c) 2026 Suikasama1968
  */
 
-#include "mz_common.h"
-
 #ifndef MZ_SYSTEM_H
 #define MZ_SYSTEM_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#include <stdint.h>
 
 // メモリ領域定義
 #define LOW_RAM_BEGIN       0x0000
@@ -201,15 +201,15 @@ extern "C" {
 #define PCG_3_ADDR      0xe000
 #define PCG_4_ADDR      0xe800
 
-extern void RESET(void) __naked;
-extern u8 fast_rand8(void) __naked;
+void RESET(void) __naked;
+extern uint8_t fast_rand8(void) __naked;
 extern void KEY_Scan(void) __naked;
 extern void BANK_VRAM(void) __naked;
 extern void BANK_DRAM_L(void) __naked;
 extern void BANK_DRAM_H(void) __naked;
 extern void BANK_ROM(void) __naked;
 
-void VRAM_Display(u8 *src) __z88dk_fastcall;
+void VRAM_Display(uint8_t *) __z88dk_fastcall __naked;
 
 // 圧縮展開
 extern void dzx0_decompress_fastcall(const void *, void *) __naked;

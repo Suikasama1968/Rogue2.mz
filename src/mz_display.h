@@ -12,7 +12,7 @@
 extern "C" {
 #endif
 
-#include "mz_common.h"
+#include <stdint.h>
 
 // ---------------------------------------------------------------- 文字のディスプレイ コード
 #define DC_A              0x01
@@ -274,9 +274,9 @@ extern "C" {
 #define PCG_BLOCK4      0xC8
 #define PCG_IS_BLOCK3(attr) ((attr) & 0x80)
 
-extern u8 mz_display_length(const u8 *);
-extern u8 mz_number(u8 *, unsigned long);
-extern void mz_sprintf(u8 *, short, const long *);
+extern uint8_t mz_display_length(const uint8_t *);
+extern uint8_t mz_number(uint8_t *, uint32_t);
+extern void mz_sprintf(uint8_t *, short, const int32_t *);
 
 #ifdef __cplusplus
 }

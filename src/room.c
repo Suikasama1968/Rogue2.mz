@@ -15,7 +15,7 @@
 #include "room.h"
 #include "mz_curses.h"
 
-#define rooms_visited ((u8 *)ROOMS_VISITED_ADDR)
+#define rooms_visited ((uint8_t *)ROOMS_VISITED_ADDR)
 
 extern short blind;
 
@@ -74,7 +74,7 @@ void darken_room(short rn)
 void
 gr_row_col(short *row, short *col, unsigned short mask)
 {
-    u8 tile;
+    uint8_t tile;
 
     do {
         *row = get_rand(MIN_ROW, MAX_ROW);
@@ -88,7 +88,7 @@ gr_row_col(short *row, short *col, unsigned short mask)
 int
 gr_room(void)
 {
-    u8 i;
+    uint8_t i;
 
     do {
         i = get_rand(0, MAXROOMS - 1);
@@ -99,7 +99,7 @@ gr_room(void)
 
 int party_objects(int rn)
 {
-    u8 i, j, n;
+    uint8_t i, j, n;
     short row, col;
     object *obj;
 
@@ -126,7 +126,7 @@ int party_objects(int rn)
 int
 get_room_number(int row, int col)
 {
-    u8 i;
+    uint8_t i;
 
     i = 0;
     do {
@@ -142,7 +142,7 @@ get_room_number(int row, int col)
 int
 is_all_connected(void)
 {
-    u8 i, starting_room = 0;
+    uint8_t i, starting_room = 0;
 
     i = 0;
     do {
@@ -166,7 +166,7 @@ is_all_connected(void)
 void
 visit_rooms(int rn)
 {
-    u8 i;
+    uint8_t i;
     short oth_rn;
 
     rooms_visited[rn] = 1;

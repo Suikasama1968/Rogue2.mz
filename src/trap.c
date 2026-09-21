@@ -29,7 +29,8 @@ boolean trap_door;
 short bear_trap;
 extern boolean sustain_strength;
 extern short ring_exp;
-#define trap_hidden ((u8 *)TRAP_HIDDEN_ADDR)
+extern short new_level_message;
+#define trap_hidden ((uint8_t *)TRAP_HIDDEN_ADDR)
 
 typedef char trap_hidden_size_check[
     MAX_TRAPS <= TRAP_HIDDEN_SIZE ? 1 : -1];
@@ -66,11 +67,14 @@ trap_player(short row, short col)
         return;
     }
 
+    if (t == TRAP_DOOR) {
+        trap_door = 1;
+        new_level_message = 217;
+        return;
+    }
+
     message_id(217 + t * 2, 0);
     switch (t) {
-    case TRAP_DOOR:
-        trap_door = 1;
-        break;
     case BEAR_TRAP:
         bear_trap = get_rand(4, 7);
         break;

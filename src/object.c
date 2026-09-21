@@ -21,7 +21,7 @@
 #include "mz_system.h"
 
 #define object_pool ((object *)OBJECT_POOL_ADDR)
-#define object_used ((u8 *)OBJECT_USED_ADDR)
+#define object_used ((uint8_t *)OBJECT_USED_ADDR)
 
 typedef char object_pool_size_check[
     sizeof(object) * MAX_OBJECTS <= OBJECT_POOL_SIZE ? 1 : -1];
@@ -32,19 +32,7 @@ static short foods;
 short party_counter;
 unsigned short identified_potions;
 
-fighter rogue = {
-    0, 0,                       /* armor, weapon */
-    0, 0,                       /* rings */
-    INIT_HP,                    /* Hp current */
-    INIT_HP,                    /* Hp max */
-    16, 16,                     /* Str */
-    {0},                        /* pack */
-    0,                          /* gold */
-    1, 0,                       /* exp, exp_points */
-    0, 0,                       /* row, col */
-    DC_AT,                      /* char */
-    1250                        /* moves */
-};
+fighter rogue;
 
 void
 put_objects(void)
@@ -203,7 +191,7 @@ gr_scroll(object *obj)
 {
     short percent;
     int i;
-    static const u8 per[SCROLS] = {
+    static const uint8_t per[SCROLS] = {
         5, 11, 16, 21, 36, 44, 51, 56, 65, 74, 80, 85
     };
 
@@ -222,7 +210,7 @@ gr_potion(object *obj)
 {
     short percent;
     int i;
-    static const u8 per[POTIONS] = {
+    static const uint8_t per[POTIONS] = {
         10, 20, 30, 40, 50, 55, 65, 75, 85, 95, 105, 110, 114, 118
     };
 
@@ -339,8 +327,8 @@ void put_stairs(void)
     do {
         gr_row_col(&row, &col, FLOOR | TUNNEL);
     } while (object_at(&level_objects, row, col));
-    stairs_row = (u8)row;
-    stairs_col = (u8)col;
+    stairs_row = (uint8_t)row;
+    stairs_col = (uint8_t)col;
     DUNGEON(row, col) = TILE_STAIRS;
 }
 
@@ -670,4 +658,18 @@ clear_level_objects(void)
         obj = next;
     }
     level_objects.next_object = 0;
+}
+
+void
+reset_object_state(void)
+{
+    memset(&rogue, 0, sizeof(rogue));
+    rogue.hp_current = INIT_HP;
+    rogue.hp_max = INIT_HP;
+    rogue.str_current = 16;
+    rogue.str_max = 16;
+    rogue.exp = 1;
+    rogue.fchar = DC_AT;
+    rogue.moves_left = 1250;
+    foods = 0;
 }
