@@ -131,6 +131,8 @@ rogue_damage(short d, object *monster)
 #endif
 }
 
+/* MZ-700/1500では未使用 */
+/*
 int
 get_damage(char *ds, boolean r)
 {
@@ -158,7 +160,7 @@ get_damage(char *ds, boolean r)
     }
     return total;
 }
-
+*/
 int
 get_w_damage(object *obj)
 {
@@ -174,6 +176,7 @@ get_w_damage(object *obj)
     return damage;
 }
 
+#if 0 /* MZ-700/1500では未使用 */
 int
 get_number(char *s)
 {
@@ -184,6 +187,7 @@ get_number(char *s)
     }
     return total;
 }
+#endif
 
 #if 0 /* MZ-700/1500では未サポート */
 long

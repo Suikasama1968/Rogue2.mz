@@ -284,20 +284,19 @@ move_mon_to(object *monster, short row, short col)
 int
 mon_can_go(object *monster, short row, short col)
 {
-    object *other;
+    object *obj;
     short dr, dc;
 
     dr = monster->row - row;    /* check if move distance > 1 */
     dc = monster->col - col;
-
     if (dr >= 2 || dr <= -2 || dc >= 2 || dc <= -2) {
         return 0;
     }
     if (!can_move(monster->row, monster->col, row, col)) {
         return 0;
     }
-    other = monster_at(row, col);
-    return !other || other == monster;
+    obj = monster_at(row, col);
+    return !obj;
 }
 
 void

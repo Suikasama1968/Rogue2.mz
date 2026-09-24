@@ -76,6 +76,7 @@ object
         return obj;
     }
     if (pack_count(obj) >= MAX_PACK_COUNT) {
+        *status = 1;
         message_id(87, 0);
         return 0;
     }

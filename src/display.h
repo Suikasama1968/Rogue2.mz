@@ -12,5 +12,6 @@ extern void display_dungeon(void);
 extern void refresh_dungeon(void);
 extern void init_color_attr(void);
 extern void colorize_dungeon(short row, short col);
+extern void reveal_hidden_tile(uint8_t *tile);
 
 #endif /* not __DISPLAY_H__ */

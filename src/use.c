@@ -223,6 +223,7 @@ read_scroll(void)
     case MAGIC_MAPPING:
         for (row = MIN_ROW; row <= MAX_ROW; ++row) {
             for (col = 0; col < ROGUE_COLUMNS; ++col) {
+                reveal_hidden_tile(&DUNGEON(row, col));
                 if (DUNGEON(row,col) != TILE_ROCK)
                     colorize_dungeon(row, col);
             }

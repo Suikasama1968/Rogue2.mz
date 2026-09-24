@@ -1,0 +1,222 @@
+diff --git a/src/display.c b/src/display.c
+index 0502394..b0b1a64 100644
+--- a/src/display.c
++++ b/src/display.c
+@@ -44,6 +44,8 @@ void colorize_dungeon(short row, short col)
+     switch (ch) {
+     case TILE_WALL_H:
+     case TILE_WALL_V:
++    case TILE_HIDDEN_DOOR_H:
++    case TILE_HIDDEN_DOOR_V:
+     case TILE_TUNNEL:
+     case TILE_DOOR:
+         pair = PAIR_TERRAIN;
+@@ -172,3 +179,11 @@ void refresh_dungeon(void)
+     }
+     attrset(COLOR_PAIR(PAIR_NORMAL));
+ }
++
++/* MZ-700/1500固有: 探索と地図の巻物で隠し地形を通常の地形へ戻す。 */
++void reveal_hidden_tile(uint8_t *tile)
++{
++    if (*tile >= TILE_HIDDEN_DOOR_H) {
++        *tile = (*tile == TILE_HIDDEN_TUNNEL) ? TILE_TUNNEL : TILE_DOOR;
++    }
++}
+diff --git a/src/display.h b/src/display.h
+index 2be05f8..daa396a 100644
+--- a/src/display.h
++++ b/src/display.h
+@@ -12,5 +12,6 @@ extern void display_dungeon(void);
+ extern void refresh_dungeon(void);
+ extern void init_color_attr(void);
+ extern void colorize_dungeon(short row, short col);
++extern void reveal_hidden_tile(uint8_t *tile);
+ 
+ #endif /* not __DISPLAY_H__ */
+diff --git a/src/level.c b/src/level.c
+index 9aa210c..951adc0 100644
+--- a/src/level.c
++++ b/src/level.c
+@@ -334,6 +334,10 @@ put_door(room *rm, short dir, short *row, short *col)
+     }
+     p = dungeon + (uint16_t)*row * ROGUE_COLUMNS + *col;
+     *p = TILE_DOOR;
++    if (cur_level > 2 && rand_percent(HIDE_PERCENT)) {
++        *p = (dir == UPWARD || dir == DOWN) ?
++             TILE_HIDDEN_DOOR_H : TILE_HIDDEN_DOOR_V;
++    }
+     dp->door_row = *row;
+     dp->door_col = *col;
+ }
+@@ -391,11 +395,9 @@ draw_simple_passage(short row1, short col1, short row2, short col2, short dir)
+             p += ROGUE_COLUMNS;
+         }
+     }
+-#if 0 /* MZ-700/MZ-1500では未対応*/
+     if (rand_percent(HIDE_PERCENT)) {
+ 	    hide_boxed_passage(row1, col1, row2, col2, 1);
+     }
+-#endif
+ }
+ 
+ int
+@@ -444,6 +446,7 @@ add_mazes(void)
+         room_exists[j] = 1;
+         make_maze(get_rand(tr, br), get_rand(lc, rc),
+                   tr, br, lc, rc);
++        hide_boxed_passage(tr, lc, br, rc, get_rand(0, 2));
+     }
+ }
+ 
+@@ -566,7 +569,6 @@ next_direction:
+     goto next_direction;
+ }
+ 
+-#if 0 /* MZ-700/1500では未対応 */
+ void
+ hide_boxed_passage(short row1, short col1, short row2, short col2, short n)
+ {
+@@ -592,8 +594,8 @@ hide_boxed_passage(short row1, short col1, short row2, short col2, short n)
+ 		for (j = 0; j < 10; j++) {
+ 		    row = get_rand(row1 + row_cut, row2 - row_cut);
+ 		    col = get_rand(col1 + col_cut, col2 - col_cut);
+-		    if (dungeon[row][col] == TUNNEL) {
+-			dungeon[row][col] |= HIDDEN;
++		    if (DUNGEON(row, col) == TILE_TUNNEL) {
++			DUNGEON(row, col) = TILE_HIDDEN_TUNNEL;
+ 			break;
+ 		    }
+ 		}
+@@ -601,7 +603,6 @@ hide_boxed_passage(short row1, short col1, short row2, short col2, short n)
+ 	}
+     }
+ }
+-#endif
+ 
+ void put_player(short nr)
+ {
+diff --git a/src/level.h b/src/level.h
+index d838a33..1bbd0b6 100644
+--- a/src/level.h
++++ b/src/level.h
+@@ -22,12 +22,12 @@ extern void make_maze(short r, short c, short tr, short br, short lc, short rc);
+ extern void add_exp(int e, boolean promotion);
+ extern int get_exp_level(long e);
+ extern int hp_raise(void);
++extern void hide_boxed_passage(short row1, short col1, short row2, short col2,
++                               short n);
+ 
+ #if 0 /* MZ-700/1500では未対応 */
+ extern boolean mask_room(short rn, short *row, short *col,
+                          unsigned short mask);
+-extern void hide_boxed_passage(short row1, short col1, short row2, short col2,
+-                               short n);
+ extern void show_average_hp(void);
+ #endif
+ 
+diff --git a/src/mz_display.h b/src/mz_display.h
+index 78e85a6..9b23144 100644
+--- a/src/mz_display.h
++++ b/src/mz_display.h
+@@ -222,6 +222,11 @@ extern "C" {
+ #define DC_YEN            0xdd    // ￥
+ #define DC_SNAKE          0xdf
+ 
++/* MZ-700/1500固有: 仮想地形専用。VRAM転送時だけ壁・空白に変換する。 */
++#define TILE_HIDDEN_DOOR_H 0xfd
++#define TILE_HIDDEN_DOOR_V 0xfe
++#define TILE_HIDDEN_TUNNEL 0xff
++
+ // 0xf0 以降は制御コード
+ #define DC_SP             0xf0    // DC_MOVE_RIGHT, 1 と同じ
+ #define DC_MOVE_RIGHT     0xf1    // 位置を n 文字右へ移動(2 bytes 目で指定) 改行には影響なし
+diff --git a/src/mz_system.c b/src/mz_system.c
+index e2335e8..5bf5be7 100644
+--- a/src/mz_system.c
++++ b/src/mz_system.c
+@@ -177,8 +177,27 @@ ld   a, 22
+ 
+ LOOP_A:
+     // ---- VRAM転送 -------------------------------------------
+-    ld  bc, 40               // 1行分(40バイト)転送
+-    ldir
++    // Hidden terrain stays encoded in virtual RAM; only the visible glyph changes.
++    push af
++    ld  b, 40
++DISPLAY_MAP_CHAR:
++    ld  a, (hl)
++    cp  TILE_HIDDEN_DOOR_H
++    jr  c, DISPLAY_MAP_STORE
++    jr  nz, DISPLAY_MAP_VERTICAL
++    ld  a, DC_MINUS
++    jr  DISPLAY_MAP_STORE
++DISPLAY_MAP_VERTICAL:
++    cp  TILE_HIDDEN_DOOR_V
++    ld  a, DC_PIPE
++    jr  z, DISPLAY_MAP_STORE
++    ld  a, DC_SPC
++DISPLAY_MAP_STORE:
++    ld  (de), a
++    inc hl
++    inc de
++    djnz DISPLAY_MAP_CHAR
++    pop af
+     ld  bc, 40               // 仮想画面の残り40桁をスキップ
+     add hl, bc
+ 
+diff --git a/src/trap.c b/src/trap.c
+index f52d3e4..499b359 100644
+--- a/src/trap.c
++++ b/src/trap.c
+@@ -30,6 +30,7 @@ short bear_trap;
+ extern boolean sustain_strength;
+ extern short ring_exp;
+ extern short new_level_message;
++extern short blind;
+ #define trap_hidden ((uint8_t *)TRAP_HIDDEN_ADDR)
+ 
+ typedef char trap_hidden_size_check[
+@@ -169,6 +174,8 @@ void search(short n, boolean is_auto)
+     short i;
+     short dr;
+     short dc;
++    short row, col;
++    uint8_t *tile;
+ 
+     for (s = 0; s < n; ++s) {
+         for (i = 0; i < MAX_TRAPS && traps[i].trap_type != NO_TRAP; ++i) {
+@@ -181,6 +188,21 @@ void search(short n, boolean is_auto)
+                 message_id(216 + traps[i].trap_type * 2, 0);
+             }
+         }
++        for (dr = -1; dr <= 1; dr++) {
++            row = rogue.row + dr;
++            if (row < MIN_ROW || row > MAX_ROW) continue;
++            for (dc = -1; dc <= 1; dc++) {
++                col = rogue.col + dc;
++                if (col < 0 || col >= ROGUE_COLUMNS) continue;
++                tile = &DUNGEON(row, col);
++                if (*tile >= TILE_HIDDEN_DOOR_H &&
++                    rand_percent(17 + rogue.exp + ring_exp)) {
++                    reveal_hidden_tile(tile);
++                    if (!blind) colorize_dungeon(row, col);
++                }
++            }
++        }
++        attrset(A_NORMAL);
+         if (!is_auto) reg_move();
+     }
+ }
+diff --git a/src/use.c b/src/use.c
+index e4244e2..1921382 100644
+--- a/src/use.c
++++ b/src/use.c
+@@ -223,6 +223,7 @@ read_scroll(void)
+     case MAGIC_MAPPING:
+         for (row = MIN_ROW; row <= MAX_ROW; ++row) {
+             for (col = 0; col < ROGUE_COLUMNS; ++col) {
++                reveal_hidden_tile(&DUNGEON(row, col));
+                 if (DUNGEON(row,col) != TILE_ROCK)
+                     colorize_dungeon(row, col);
+             }

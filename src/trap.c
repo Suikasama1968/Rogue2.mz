@@ -30,6 +30,7 @@ short bear_trap;
 extern boolean sustain_strength;
 extern short ring_exp;
 extern short new_level_message;
+extern short blind;
 #define trap_hidden ((uint8_t *)TRAP_HIDDEN_ADDR)
 
 typedef char trap_hidden_size_check[
@@ -83,7 +84,11 @@ trap_player(short row, short col)
         break;
     case DART_TRAP:
 #if !defined(DEBUG)
+#if 0
         rogue.hp_current -= get_damage("1d6", 1);
+#else
+        rogue.hp_current -= get_rand(1,6);
+#endif
         if (rogue.hp_current < 0) rogue.hp_current = 0;
 #endif
         if ((!sustain_strength) && (rogue.str_current >= 3) && rand_percent(40)) {
@@ -169,6 +174,8 @@ void search(short n, boolean is_auto)
     short i;
     short dr;
     short dc;
+    short row, col;
+    uint8_t *tile;
 
     for (s = 0; s < n; ++s) {
         for (i = 0; i < MAX_TRAPS && traps[i].trap_type != NO_TRAP; ++i) {
@@ -181,6 +188,21 @@ void search(short n, boolean is_auto)
                 message_id(216 + traps[i].trap_type * 2, 0);
             }
         }
+        for (dr = -1; dr <= 1; dr++) {
+            row = rogue.row + dr;
+            if (row < MIN_ROW || row > MAX_ROW) continue;
+            for (dc = -1; dc <= 1; dc++) {
+                col = rogue.col + dc;
+                if (col < 0 || col >= ROGUE_COLUMNS) continue;
+                tile = &DUNGEON(row, col);
+                if (*tile >= TILE_HIDDEN_DOOR_H &&
+                    rand_percent(17 + rogue.exp + ring_exp)) {
+                    reveal_hidden_tile(tile);
+                    if (!blind) colorize_dungeon(row, col);
+                }
+            }
+        }
+        attrset(A_NORMAL);
         if (!is_auto) reg_move();
     }
 }

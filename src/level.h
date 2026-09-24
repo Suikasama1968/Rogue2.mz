@@ -22,12 +22,12 @@ extern void make_maze(short r, short c, short tr, short br, short lc, short rc);
 extern void add_exp(int e, boolean promotion);
 extern int get_exp_level(long e);
 extern int hp_raise(void);
+extern void hide_boxed_passage(short row1, short col1, short row2, short col2,
+                               short n);
 
 #if 0 /* MZ-700/1500では未対応 */
 extern boolean mask_room(short rn, short *row, short *col,
                          unsigned short mask);
-extern void hide_boxed_passage(short row1, short col1, short row2, short col2,
-                               short n);
 extern void show_average_hp(void);
 #endif
 

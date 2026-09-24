@@ -63,6 +63,8 @@ inventory(object *pack, unsigned short mask)
         uint8_t rows = 0;
         uint8_t *desc = (uint8_t *)TEMP_BUFFER_ADDR;
         uint8_t row;
+        uint8_t *text_row = dungeon + ROGUE_COLUMNS + col;
+        uint8_t *attr_row = dungeon_attr + ROGUE_COLUMNS + col;
 
         while (next && rows < INVENTORY_PAGE_ROWS) {
             if (next->what_is & mask) ++rows;
@@ -73,27 +75,24 @@ inventory(object *pack, unsigned short mask)
         while (obj && row < rows) {
             if (obj->what_is & mask) {
                 get_desc(obj, (char *)desc, 0);
-                memset(dungeon + (unsigned int)(row + 1) * ROGUE_COLUMNS + col,
-                       DC_SPC, 40);
-                memset(dungeon_attr +
-                       (unsigned int)(row + 1) * ROGUE_COLUMNS + col,
-                       0x70, 40);
-                DUNGEON(row + 1, col) =
-                    (uint8_t)(DC_A + obj->ichar - 'a');
-                DUNGEON(row + 1, col + 1) = DC_R_BLACKET;
-                DUNGEON(row + 1, col + 2) = DC_SPC;
-                DUNGEON_ATTR(row + 1, col) = 0xf0;
-                DUNGEON_ATTR(row + 1, col + 1) = 0xf0;
-                DUNGEON_ATTR(row + 1, col + 2) = 0xf0;
+                /* MZ-700/1500固有: 行頭を再利用し、表示した行だけ進める。 */
+                memset(text_row, DC_SPC, 40);
+                memset(attr_row, 0x70, 40);
+                text_row[0] = (uint8_t)(DC_A + obj->ichar - 'a');
+                text_row[1] = DC_R_BLACKET;
+                text_row[2] = DC_SPC;
+                attr_row[0] = 0xf0;
+                attr_row[1] = 0xf0;
+                attr_row[2] = 0xf0;
                 mvaddnstr((uint8_t)(row + 1), (uint8_t)(col + 3), desc, 37);
                 ++row;
+                text_row += ROGUE_COLUMNS;
+                attr_row += ROGUE_COLUMNS;
             }
             obj = obj->next_object;
         }
-        memset(dungeon + (unsigned int)(rows + 1) * ROGUE_COLUMNS + col,
-               DC_SPC, 40);
-        memset(dungeon_attr +
-               (unsigned int)(rows + 1) * ROGUE_COLUMNS + col, 0x70, 40);
+        memset(text_row, DC_SPC, 40);
+        memset(attr_row, 0x70, 40);
 
         (void)get_message(518, desc, TEMP_BUFFER_SIZE);
         mvaddnstr((uint8_t)(rows + 1), col, desc, 40);

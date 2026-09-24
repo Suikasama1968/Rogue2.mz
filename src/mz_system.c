@@ -177,8 +177,27 @@ ld   a, 22
 
 LOOP_A:
     // ---- VRAM転送 -------------------------------------------
-    ld  bc, 40               // 1行分(40バイト)転送
-    ldir
+    // Hidden terrain stays encoded in virtual RAM; only the visible glyph changes.
+    push af
+    ld  b, 40
+DISPLAY_MAP_CHAR:
+    ld  a, (hl)
+    cp  TILE_HIDDEN_DOOR_H
+    jr  c, DISPLAY_MAP_STORE
+    jr  nz, DISPLAY_MAP_VERTICAL
+    ld  a, DC_MINUS
+    jr  DISPLAY_MAP_STORE
+DISPLAY_MAP_VERTICAL:
+    cp  TILE_HIDDEN_DOOR_V
+    ld  a, DC_PIPE
+    jr  z, DISPLAY_MAP_STORE
+    ld  a, DC_SPC
+DISPLAY_MAP_STORE:
+    ld  (de), a
+    inc hl
+    inc de
+    djnz DISPLAY_MAP_CHAR
+    pop af
     ld  bc, 40               // 仮想画面の残り40桁をスキップ
     add hl, bc
 

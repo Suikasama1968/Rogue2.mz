@@ -84,7 +84,7 @@ one_move_rogue(short dirch, short pickup)
     if (obj) {
         rogue_hit(obj, 0);
         reg_move();
-        return STOPPED_ON_SOMETHING;
+        return MOVE_FAILED;
     }
     if (DUNGEON(row, col) == TILE_DOOR) {
         if (cur_room == PASSAGE) {
@@ -112,30 +112,53 @@ one_move_rogue(short dirch, short pickup)
     colorize_dungeon(rogue.row, rogue.col);
     rogue.row = row;
     rogue.col = col;
-    if (!levitate && trap_at(row, col) != NO_TRAP) trap_player(row, col);
-    if (levitate && pickup && object_at(&level_objects, row, col)) {
-        reg_move();
-        return STOPPED_ON_SOMETHING;
-    }
-    if (pickup && (obj = pick_up(row, col, &status)) != 0) {
+    if ((obj = object_at(&level_objects, row, col)) != 0) {
+        if (levitate && pickup) return STOPPED_ON_SOMETHING;
+        if (pickup && !levitate) {
+            obj = pick_up(row, col, &status);
+            if (!obj) {
+                if (!status) goto MVED;
+                goto MOVE_ON;
+            }
+        } else {
+MOVE_ON:
+            obj = object_at(&level_objects, row, col);
+            get_desc(obj, desc, 0);
+            length = 0;
+            while (desc[length] != '\0') length++;
+            get_message(70, (uint8_t *)desc + length,
+                        ROGUE_COLUMNS - length);
+            goto NOT_IN_PACK;
+        }
         get_desc(obj, desc, 1);
         length = 0;
         while (desc[length] != '\0') ++length;
         length += get_message(69, (uint8_t *)desc + length,
                               ROGUE_COLUMNS - length);
-        if (obj->what_is != GOLD && length < ROGUE_COLUMNS - 4) {
+        if (obj->what_is == GOLD) {
+            free_object(obj);
+            goto NOT_IN_PACK;
+        }
+        if (length < ROGUE_COLUMNS - 4) {
             desc[length++] = (char)DC_L_BLACKET;
             desc[length++] = (char)(DC_A + obj->ichar - 'a');
             desc[length++] = (char)DC_R_BLACKET;
             desc[length] = '\0';
         }
+NOT_IN_PACK:
         message((char *)desc, 1);
-        if (obj->what_is == GOLD) free_object(obj);
         reg_move();
         return STOPPED_ON_SOMETHING;
     }
-    reg_move();
-    return MOVED;
+    if (DUNGEON(row, col) == TILE_DOOR ||
+        DUNGEON(row, col) == TILE_STAIRS || trap_at(row, col) != NO_TRAP) {
+        if (!levitate && trap_at(row, col) != NO_TRAP) trap_player(row, col);
+        reg_move();
+        return STOPPED_ON_SOMETHING;
+    }
+MVED:
+    if (reg_move()) return STOPPED_ON_SOMETHING;
+    return confused ? STOPPED_ON_SOMETHING : MOVED;
 }
 
 #if 0 /* MZ-700/1500では未対応 */
@@ -388,6 +411,7 @@ check_hunger(boolean messages_only)
                      mv_mons();
                 }
             }
+            message_id(66, 0);
         }
     }
     if (messages_only) {
@@ -423,7 +447,11 @@ check_hunger(boolean messages_only)
 boolean
 reg_move(void)
 {
-    boolean fainted = check_hunger(0);
+    boolean fainted = 0;
+
+    if (rogue.moves_left <= HUNGRY || cur_level >= max_level) {
+        fainted = check_hunger(0);
+    }
 
     /* rogue_turns++; 未使用 */
     
@@ -433,14 +461,14 @@ reg_move(void)
         m_moves = 0;
         wanderer();
     }
-    if (blind){
-        if(!(--blind)) {
-            unblind();
-        }
-    }
     if (halluc) {
         if (!(--halluc)) {
             unhallucinate();
+        }
+    }
+    if (blind){
+        if(!(--blind)) {
+            unblind();
         }
     }
     if (confused){

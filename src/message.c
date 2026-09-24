@@ -278,18 +278,14 @@ print_stats(int stat_mask)
     uint8_t *line1 = (uint8_t *)TEMP_BUFFER_ADDR;
     uint8_t *line2 = line1 + 48;
     uint8_t *status1 = dungeon + ROGUE_COLUMNS * STATUS_ROW_1;
-    uint8_t *status2 = dungeon + ROGUE_COLUMNS * STATUS_ROW_2;
     uint8_t *attr1 = dungeon_attr + ROGUE_COLUMNS * STATUS_ROW_1;
-    uint8_t *attr2 = dungeon_attr + ROGUE_COLUMNS * STATUS_ROW_2;
     long *values = (long *)(line2 + 48);
 
     /* 40列版では2行を一体で整形するため、指定項目を含む全体を再描画する。 */
     (void)stat_mask;
     attrset(A_NORMAL);
-    memset(status1, TILE_ROCK, ROGUE_COLUMNS);
-    memset(status2, TILE_ROCK, ROGUE_COLUMNS);
-    memset(attr1, ATTR_VISIBLE, ROGUE_COLUMNS);
-    memset(attr2, ATTR_VISIBLE, ROGUE_COLUMNS);
+    memset(status1, TILE_ROCK, ROGUE_COLUMNS * 2);
+    memset(attr1, ATTR_VISIBLE, ROGUE_COLUMNS * 2);
     values[0] = cur_level;
     values[1] = rogue.gold;
     values[2] = rogue.hp_current;

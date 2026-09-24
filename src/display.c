@@ -44,6 +44,8 @@ void colorize_dungeon(short row, short col)
     switch (ch) {
     case TILE_WALL_H:
     case TILE_WALL_V:
+    case TILE_HIDDEN_DOOR_H:
+    case TILE_HIDDEN_DOOR_V:
     case TILE_TUNNEL:
     case TILE_DOOR:
         pair = PAIR_TERRAIN;
@@ -79,16 +81,20 @@ void display_dungeon(void)
 void refresh_dungeon(void)
 {
     object *obj;
+    uint16_t offset;
+    uint16_t player_offset = (uint16_t)rogue.row * ROGUE_COLUMNS + rogue.col;
     uint8_t object_char;
-    uint8_t tile = DUNGEON(rogue.row, rogue.col);
-    uint8_t attr = DUNGEON_ATTR(rogue.row, rogue.col);
+    uint8_t tile;
+    uint8_t attr = dungeon_attr[player_offset];
 
+    /* MZ-700/1500固有: 文字面と属性面で同じオフセットを再利用する。 */
     for (obj = level_objects.next_object; obj; obj = obj->next_object) {
+        offset = (uint16_t)obj->row * ROGUE_COLUMNS + obj->col;
         if ((obj->picked_up & OBJECT_DETECTED) ||
-            DUNGEON_ATTR(obj->row, obj->col) != ATTR_HIDDEN) {
+            dungeon_attr[offset] != ATTR_HIDDEN) {
             attrset(COLOR_PAIR(PAIR_OBJECT));
-            obj->trail_char = DUNGEON(obj->row, obj->col);
-            if (DUNGEON_ATTR(obj->row, obj->col) == ATTR_HIDDEN) {
+            obj->trail_char = dungeon[offset];
+            if (dungeon_attr[offset] == ATTR_HIDDEN) {
                 obj->picked_up |= OBJECT_WAS_HIDDEN;
             } else {
                 obj->picked_up &= ~OBJECT_WAS_HIDDEN;
@@ -124,9 +130,7 @@ void refresh_dungeon(void)
                 object_char = DC_COLON;
                 break;
             }
-            DUNGEON(obj->row, obj->col) = object_char;
-            mvaddch((uint8_t)obj->row, (uint8_t)obj->col,
-                    DUNGEON(obj->row, obj->col));
+            mvaddch((uint8_t)obj->row, (uint8_t)obj->col, object_char);
         }
     }
     for (obj = level_monsters.next_monster; obj; obj = obj->next_monster) {
@@ -135,8 +139,9 @@ void refresh_dungeon(void)
              r_see_invisible)) {
             attrset(COLOR_PAIR((obj->m_flags & IMITATES) ?
                                PAIR_OBJECT : PAIR_MONSTER));
-            obj->trail_char = DUNGEON(obj->row, obj->col);
-            obj->trail_attr = DUNGEON_ATTR(obj->row, obj->col);
+            offset = (uint16_t)obj->row * ROGUE_COLUMNS + obj->col;
+            obj->trail_char = dungeon[offset];
+            obj->trail_attr = dungeon_attr[offset];
             mvaddch((uint8_t)obj->row, (uint8_t)obj->col,
                     halluc ? (uint8_t)(DC_A + get_rand(0, MONSTERS - 1)) :
                     ((obj->m_flags & IMITATES) ?
@@ -144,26 +149,28 @@ void refresh_dungeon(void)
         }
     }
     attrset(COLOR_PAIR(PAIR_PLAYER));
-    tile = DUNGEON(rogue.row, rogue.col);
+    tile = dungeon[player_offset];
     mvaddch((uint8_t)rogue.row, (uint8_t)rogue.col, (uint16_t)rogue.fchar);
     move((uint8_t)rogue.row, (uint8_t)rogue.col);
     refresh();
-    DUNGEON(rogue.row, rogue.col) = tile;
-    DUNGEON_ATTR(rogue.row, rogue.col) = attr;
+    dungeon[player_offset] = tile;
+    dungeon_attr[player_offset] = attr;
     for (obj = level_monsters.next_monster; obj; obj = obj->next_monster) {
         if (!blind && (detect_monster || rogue_can_see(obj->row, obj->col)) &&
             (!(obj->m_flags & INVISIBLE) || detect_monster || see_invisible ||
              r_see_invisible)) {
-            DUNGEON(obj->row, obj->col) = obj->trail_char;
-            DUNGEON_ATTR(obj->row, obj->col) = obj->trail_attr;
+            offset = (uint16_t)obj->row * ROGUE_COLUMNS + obj->col;
+            dungeon[offset] = obj->trail_char;
+            dungeon_attr[offset] = obj->trail_attr;
         }
     }
     for (obj = level_objects.next_object; obj; obj = obj->next_object) {
+        offset = (uint16_t)obj->row * ROGUE_COLUMNS + obj->col;
         if ((obj->picked_up & OBJECT_DETECTED) ||
-            DUNGEON_ATTR(obj->row, obj->col) != ATTR_HIDDEN) {
-            DUNGEON(obj->row, obj->col) = obj->trail_char;
+            dungeon_attr[offset] != ATTR_HIDDEN) {
+            dungeon[offset] = obj->trail_char;
             if (obj->picked_up & OBJECT_WAS_HIDDEN) {
-                DUNGEON_ATTR(obj->row, obj->col) = ATTR_HIDDEN;
+                dungeon_attr[offset] = ATTR_HIDDEN;
                 obj->picked_up &= ~OBJECT_WAS_HIDDEN;
             } else {
                 colorize_dungeon(obj->row, obj->col);
@@ -171,4 +178,12 @@ void refresh_dungeon(void)
         }
     }
     attrset(COLOR_PAIR(PAIR_NORMAL));
+}
+
+/* MZ-700/1500固有: 探索と地図の巻物で隠し地形を通常の地形へ戻す。 */
+void reveal_hidden_tile(uint8_t *tile)
+{
+    if (*tile >= TILE_HIDDEN_DOOR_H) {
+        *tile = (*tile == TILE_HIDDEN_TUNNEL) ? TILE_TUNNEL : TILE_DOOR;
+    }
 }

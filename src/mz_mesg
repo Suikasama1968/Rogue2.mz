@@ -79,6 +79,7 @@ aggravate()
 file: move.c
 one_move_rogue()
 69 "を てにいれた"
+70 "のうえにいる"
 check_hunger()
 71 "くうふく"
 72 "おなかがすいた"

@@ -222,6 +222,11 @@ extern "C" {
 #define DC_YEN            0xdd    // ￥
 #define DC_SNAKE          0xdf
 
+/* MZ-700/1500固有: 仮想地形専用。VRAM転送時だけ壁・空白に変換する。 */
+#define TILE_HIDDEN_DOOR_H 0xfd
+#define TILE_HIDDEN_DOOR_V 0xfe
+#define TILE_HIDDEN_TUNNEL 0xff
+
 // 0xf0 以降は制御コード
 #define DC_SP             0xf0    // DC_MOVE_RIGHT, 1 と同じ
 #define DC_MOVE_RIGHT     0xf1    // 位置を n 文字右へ移動(2 bytes 目で指定) 改行には影響なし

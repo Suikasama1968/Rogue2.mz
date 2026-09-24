@@ -334,6 +334,10 @@ put_door(room *rm, short dir, short *row, short *col)
     }
     p = dungeon + (uint16_t)*row * ROGUE_COLUMNS + *col;
     *p = TILE_DOOR;
+    if (cur_level > 2 && rand_percent(HIDE_PERCENT)) {
+        *p = (dir == UPWARD || dir == DOWN) ?
+             TILE_HIDDEN_DOOR_H : TILE_HIDDEN_DOOR_V;
+    }
     dp->door_row = *row;
     dp->door_col = *col;
 }
@@ -391,11 +395,9 @@ draw_simple_passage(short row1, short col1, short row2, short col2, short dir)
             p += ROGUE_COLUMNS;
         }
     }
-#if 0 /* MZ-700/MZ-1500では未対応*/
     if (rand_percent(HIDE_PERCENT)) {
 	    hide_boxed_passage(row1, col1, row2, col2, 1);
     }
-#endif
 }
 
 int
@@ -419,7 +421,7 @@ add_mazes(void)
     room *rm;
 
     if (cur_level <= 1) return;
-    start = get_rand(0, MAXROOMS - 1);
+    start = get_rand(0, (MAXROOMS - 1));
     maze_percent = (cur_level * 5) / 4;
 
     if (cur_level > 15) {
@@ -444,6 +446,7 @@ add_mazes(void)
         room_exists[j] = 1;
         make_maze(get_rand(tr, br), get_rand(lc, rc),
                   tr, br, lc, rc);
+        hide_boxed_passage(tr, lc, br, rc, get_rand(0, 2));
     }
 }
 
@@ -566,7 +569,6 @@ next_direction:
     goto next_direction;
 }
 
-#if 0 /* MZ-700/1500では未対応 */
 void
 hide_boxed_passage(short row1, short col1, short row2, short col2, short n)
 {
@@ -592,8 +594,8 @@ hide_boxed_passage(short row1, short col1, short row2, short col2, short n)
 		for (j = 0; j < 10; j++) {
 		    row = get_rand(row1 + row_cut, row2 - row_cut);
 		    col = get_rand(col1 + col_cut, col2 - col_cut);
-		    if (dungeon[row][col] == TUNNEL) {
-			dungeon[row][col] |= HIDDEN;
+		    if (DUNGEON(row, col) == TILE_TUNNEL) {
+			DUNGEON(row, col) = TILE_HIDDEN_TUNNEL;
 			break;
 		    }
 		}
@@ -601,7 +603,6 @@ hide_boxed_passage(short row1, short col1, short row2, short col2, short n)
 	}
     }
 }
-#endif
 
 void put_player(short nr)
 {

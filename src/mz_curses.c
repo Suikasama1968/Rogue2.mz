@@ -102,7 +102,8 @@ int move(uint8_t y, uint8_t x)
         main_window._cury = (uint8_t)y;
         main_window._curx = (uint8_t)x;
         main_window._cur_addr = (uint8_t *)(TEXT_V_VRAM + y * V_COLUMN + x);
-        main_window._cur_attr = (uint8_t *)(TEXT_V_ATTR + y * V_COLUMN + x);
+        main_window._cur_attr =
+            main_window._cur_addr + (TEXT_V_ATTR - TEXT_V_VRAM);
         return 0;
 }
 /*
